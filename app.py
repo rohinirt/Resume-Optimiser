@@ -43,6 +43,7 @@ if 'results' in st.session_state:
     res = st.session_state['results']
     pre = res.get("pre_optimization", {})
     post = res.get("post_optimization", {})
+    fitness = res.get("fitness_and_strategy", {})
     sec2 = res.get("section_2_tailored_content", {})
 
     col_left, col_right = st.columns([1, 1])
@@ -54,9 +55,9 @@ if 'results' in st.session_state:
             st.markdown(get_pdf_preview_html(st.session_state['resume_bytes']), unsafe_allow_html=True)
         else:
             text_preview = get_docx_preview_text(uploaded_file) if uploaded_file else ""
-            st.text_area("Document View", text_preview, height=580, disabled=True)
+            st.text_area("Document View", text_preview, height=650, disabled=True)
 
-    # RIGHT COLUMN: PRE/POST ATS SCORES & KEYWORD METRICS
+    # RIGHT COLUMN: METRICS, FITNESS & SECTION CONTROLS
     with col_right:
         st.subheader("⚡ Pre vs. Post Optimization Metrics")
 
@@ -74,6 +75,16 @@ if 'results' in st.session_state:
             st.markdown("##### 🟢 Post-Optimization")
             st.success(f"**Matching:** {', '.join(post.get('matching_keywords', []))}")
             st.error(f"**Missing:** {', '.join(post.get('missing_keywords', []))}")
+
+        st.markdown("---")
+
+        # RESTORED: ROLE FITNESS, GAPS & ALIGNMENT STRATEGY
+        with st.expander("📌 **Role Fitness, Gaps & Alignment Strategy**", expanded=True):
+            st.write("**Fitness Summary:**", fitness.get("role_fitness_summary", ""))
+            st.write("**Missing Elements & Gaps:**", fitness.get("gaps_and_missing_elements", ""))
+            st.write("**Alignment Positioning Strategy:**")
+            for strat in fitness.get("alignment_strategy", []):
+                st.write(f"- {strat}")
 
         st.markdown("---")
         st.subheader("🛠️ Mark Sections to Apply")
