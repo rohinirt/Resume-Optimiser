@@ -86,7 +86,7 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, jd_text):
     {projects_text}
     """
 
-    models_to_try = ['gemini-2.5-flash', 'gemini-1.5-flash']
+    models_to_try =['gemini-3.6-flash','gemini-2.5-flash', 'gemini-1.5-flash']
 
     for model_name in models_to_try:
         try:
