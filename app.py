@@ -1,4 +1,4 @@
-```python:app.py
+
 import streamlit as st
 from utils import (
     extract_text_from_file, 
