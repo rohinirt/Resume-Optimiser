@@ -1,7 +1,7 @@
 import os
 import json
 from google import genai
-from google.genai import types
+from google.genai import types 
 
 # Initialize Gemini Client
 client = genai.Client(api_key=os.getenv("AQ.Ab8RN6KnlLb1h-08Z4FMSTQ3HPXaWzAgzfuR9W2rCzmgjPETxg"))
