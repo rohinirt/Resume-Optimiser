@@ -1,0 +1,12 @@
+# Ignore local secrets
+.streamlit/secrets.toml
+
+# Ignore Python environment and cache
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
