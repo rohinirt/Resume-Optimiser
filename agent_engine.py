@@ -1,7 +1,7 @@
 import os
 import json
 from google import genai
-from google.genai import types 
+from google.genai import types,errors 
 import streamlit as st
 
 
