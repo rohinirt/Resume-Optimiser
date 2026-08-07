@@ -4,7 +4,6 @@ from io import BytesIO
 from pypdf import PdfReader
 
 def extract_text_from_file(uploaded_file):
-    """Extracts raw text content from uploaded PDF or Word document."""
     text = ""
     uploaded_file.seek(0)
     if uploaded_file.name.endswith(".pdf"):
@@ -19,87 +18,113 @@ def extract_text_from_file(uploaded_file):
     return text
 
 def get_pdf_preview_html(pdf_bytes):
-    """Generates an embedded iframe HTML string for PDF preview."""
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" type="application/pdf" style="border:1px solid #ccc; border-radius:8px;"></iframe>'
-    return pdf_display
+    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" style="border:1px solid #ccc; border-radius:8px;"></iframe>'
 
 def get_docx_preview_text(uploaded_file):
-    """Reads docx paragraphs into clean formatted text for display."""
     uploaded_file.seek(0)
     doc = docx.Document(uploaded_file)
     uploaded_file.seek(0)
     lines = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(lines)
 
-def add_safe_heading(doc, text, level=1):
-    """Helper function to add headings safely without crashing on missing style names."""
-    p = doc.add_paragraph()
-    run = p.add_run(text)
-    run.bold = True
-    if level == 1:
-        run.font.size = docx.shared.Pt(16)
-    elif level == 2:
-        run.font.size = docx.shared.Pt(14)
+def replace_paragraph_text_keep_formatting(paragraph, new_text):
+    """Replaces paragraph text while preserving existing run formatting (font, size, bold)."""
+    if len(paragraph.runs) > 0:
+        first_run = paragraph.runs[0]
+        # Keep font properties of first run
+        font_name = first_run.font.name
+        font_size = first_run.font.size
+        bold = first_run.bold
+        italic = first_run.italic
+        
+        # Clear all runs in paragraph
+        p_elem = paragraph._p
+        for child in list(p_elem):
+            if child.tag.endswith('r'):
+                p_elem.remove(child)
+                
+        # Create single updated run with preserved style
+        new_run = paragraph.add_run(new_text)
+        new_run.font.name = font_name
+        new_run.font.size = font_size
+        new_run.bold = bold
+        new_run.italic = italic
     else:
-        run.font.size = docx.shared.Pt(12)
-    return p
+        paragraph.text = new_text
 
-def add_safe_bullet(doc, text):
-    """Helper function to add bullet points safely without style errors."""
-    try:
-        doc.add_paragraph(text, style='List Bullet')
-    except KeyError:
-        p = doc.add_paragraph(f"• {text}")
-        p.paragraph_format.left_indent = docx.shared.Inches(0.25)
-
-def build_updated_docx(original_file_bytes, results, selections):
-    """
-    Creates an updated Word document by modifying or generating content
-    while preserving document structure safely.
-    """
+def build_updated_docx_inplace(original_file_bytes, results, selections):
+    """Edits paragraphs IN-PLACE in the original Word document without creating duplicate sections."""
     output = BytesIO()
     
-    if original_file_bytes and len(original_file_bytes) > 0:
-        doc = docx.Document(BytesIO(original_file_bytes))
-    else:
+    if not original_file_bytes or len(original_file_bytes) == 0:
         doc = docx.Document()
+    else:
+        doc = docx.Document(BytesIO(original_file_bytes))
 
-    # Append Tailored Sections
-    add_safe_heading(doc, "ATS Optimized Resume Suggestions", level=1)
-    
     sec2 = results.get("section_2_tailored_content", {})
+    
+    # Track section indices
+    p_texts = [p.text.strip().upper() for p in doc.paragraphs]
 
-    # 1. Professional Summary
-    if selections.get("apply_summary", True):
-        add_safe_heading(doc, "Professional Summary", level=2)
-        summary = sec2.get("professional_summary", {}).get("suggested_text", "")
-        doc.add_paragraph(summary)
+    # 1. PROFESSIONAL SUMMARY IN-PLACE REPLACE
+    if selections.get("apply_summary", True) and "PROFESSIONAL SUMMARY" in p_texts:
+        idx = p_texts.index("PROFESSIONAL SUMMARY")
+        if idx + 1 < len(doc.paragraphs):
+            new_summary = sec2.get("professional_summary", "")
+            replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], new_summary)
 
-    # 2. Core Competencies / Skills
+    # 2. TECHNICAL SKILLS / CORE COMPETENCIES IN-PLACE REPLACE
     if selections.get("apply_skills", True):
-        add_safe_heading(doc, "Core Competencies & Skills", level=2)
-        skills = sec2.get("core_competencies", {}).get("suggested_skills", [])
-        if skills:
-            doc.add_paragraph(", ".join(skills))
+        for header in ["TECHNICAL SKILLS", "CORE COMPETENCIES", "SKILLS"]:
+            if header in p_texts:
+                idx = p_texts.index(header)
+                if idx + 1 < len(doc.paragraphs):
+                    skills_list = ", ".join(sec2.get("core_competencies", []))
+                    replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], skills_list)
+                break
 
-    # 3. Professional Experience
-    if selections.get("apply_exp", True):
-        add_safe_heading(doc, "Professional Experience", level=2)
-        roles = sec2.get("professional_experience", [])
-        for role in roles:
-            add_safe_heading(doc, role.get("role_title", "Role"), level=3)
-            for bullet in role.get("suggested_bullets", []):
-                add_safe_bullet(doc, bullet)
+    # 3. WORK EXPERIENCE IN-PLACE BULLET REPLACEMENT
+    if selections.get("apply_exp", True) and "WORK EXPERIENCE" in p_texts:
+        exp_idx = p_texts.index("WORK EXPERIENCE")
+        exp_data = sec2.get("professional_experience", [])
+        
+        # Collect generated bullets
+        all_bullets = []
+        for role in exp_data:
+            all_bullets.extend(role.get("bullets", []))
+        
+        bullet_counter = 0
+        for i in range(exp_idx + 1, len(doc.paragraphs)):
+            text = doc.paragraphs[i].text.strip()
+            # Stop if we hit the next major section header
+            if text.upper() in ["PROJECTS", "EDUCATION", "CERTIFICATIONS"]:
+                break
+            
+            # If paragraph is a bullet point or description line
+            if len(text) > 15 and not any(company in text for company in ["Uber", "TopN Analytics", "Jan 202", "Oct 202"]):
+                if bullet_counter < len(all_bullets):
+                    replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_bullets[bullet_counter])
+                    bullet_counter += 1
 
-    # 4. Projects
-    if selections.get("apply_projects", True):
-        add_safe_heading(doc, "Key Analytics Projects", level=2)
-        projects = sec2.get("projects", {}).get("selected_projects", [])
-        for proj in projects:
-            add_safe_heading(doc, proj.get("project_title", "Project"), level=3)
-            for bullet in proj.get("suggested_bullets", []):
-                add_safe_bullet(doc, bullet)
+    # 4. PROJECTS IN-PLACE BULLET REPLACEMENT
+    if selections.get("apply_projects", True) and "PROJECTS" in p_texts:
+        proj_idx = p_texts.index("PROJECTS")
+        proj_data = sec2.get("projects", [])
+        
+        all_proj_bullets = []
+        for proj in proj_data:
+            all_proj_bullets.extend(proj.get("bullets", []))
+
+        proj_counter = 0
+        for i in range(proj_idx + 1, len(doc.paragraphs)):
+            text = doc.paragraphs[i].text.strip()
+            if text.upper() in ["EDUCATION", "CERTIFICATIONS"]:
+                break
+            if len(text) > 15 and not any(title in text for title in ["Dashboard", "Optimization", "Tableau", "Python"]):
+                if proj_counter < len(all_proj_bullets):
+                    replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_proj_bullets[proj_counter])
+                    proj_counter += 1
 
     doc.save(output)
     output.seek(0)
