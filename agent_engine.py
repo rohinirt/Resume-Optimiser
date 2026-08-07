@@ -32,22 +32,34 @@ Return ONLY a valid JSON object matching this schema:
     "matching_keywords": ["SQL", "Python", "Tableau", "A/B Testing", "ETL"],
     "missing_keywords": ["Snowflake", "dbt"]
   },
+  "fitness_and_strategy": {
+    "role_fitness_summary": "Strong technical foundation in SQL, Python, and ETL pipeline design from Uber experience. High fitness for senior/mid Data Analyst roles requiring operational analytics.",
+    "gaps_and_missing_elements": "Lacks explicit enterprise data warehouse exposure like Snowflake or dbt, though strong in BigQuery.",
+    "alignment_strategy": [
+      "Front-load Google XYZ metrics on high-volume ETL pipelines (80K-90K daily records).",
+      "Highlight cross-functional stakeholder leadership across global mega-regions.",
+      "Emphasize dashboard migrations (Looker Studio to Streamlit) to align with advanced analytics requirements."
+    ]
+  },
   "section_2_tailored_content": {
-    "professional_summary": "Detail-Oriented Data Analyst with hands-on experience at Uber...",
-    "core_competencies": ["SQL", "BigQuery", "Python", "Tableau", "Looker Studio", "ETL"],
+    "professional_summary": "Detail-Oriented Data Analyst with hands-on experience at Uber driving high-impact analytics across automated ETL pipelines, interactive dashboards, and large-scale data systems. Skilled in SQL, BigQuery, Python, Looker Studio, and Streamlit to optimize operational SLAs.",
+    "core_competencies": ["SQL", "BigQuery", "Python", "Tableau", "Looker Studio", "ETL Pipelines", "A/B Testing"],
     "professional_experience": [
       {
         "role_title": "Data Analytics Specialist, Uber",
         "bullets": [
-          "Engineered and maintained automated ETL data pipelines...",
-          "Developed and deployed interactive Looker Studio dashboards..."
+          "Engineered and maintained automated ETL data pipelines using Google Sheets, Python, SQL, and BigQuery to process 80K–90K+ records daily/weekly, reducing performance tracking cycle times by 40%.",
+          "Developed and deployed interactive Looker Studio dashboards integrated with Row-Level Security for Identity Operations enabling 200+ global users to self-serve insights.",
+          "Rebuilt and migrated core analytics dashboards from Looker Studio to Streamlit using Cursor AI, improving dashboard load times and key metric discovery by 30%.",
+          "Designed automated scorecards using Google Sheets and SQL to monitor vendor compliance and track operational SLAs across external BPO partners."
         ]
       },
       {
         "role_title": "Data Analyst Intern, TopN Analytics",
         "bullets": [
-          "Accelerated reporting efficiency by 20%...",
-          "Improved data accuracy by 85%..."
+          "Accelerated reporting efficiency by 20% for 3+ stakeholder teams by building 4+ interactive Tableau and Looker Studio dashboards.",
+          "Improved data accuracy by 85% by scraping and processing 1,000+ rows of real-time data using Python (BeautifulSoup, Pandas, NumPy).",
+          "Increased cross-functional dashboard adoption by collaborating directly with teams to translate requirements into analytical solutions."
         ]
       }
     ],
@@ -55,21 +67,21 @@ Return ONLY a valid JSON object matching this schema:
       {
         "project_title": "Retail Price Optimization",
         "bullets": [
-          "Yielded a 28% average revenue increase per product...",
-          "Quantified business impact across pricing strategies..."
+          "Yielded a 28% average revenue increase per product by developing a Random Forest model in Python to forecast demand and price elasticity.",
+          "Quantified business impact across pricing strategies by constructing an interactive price optimization simulator."
         ]
       },
       {
         "project_title": "Merchandise Sales Dashboard",
         "bullets": [
-          "Analyzed 7,000+ orders to identify primary sales drivers...",
-          "Identified key demographic segments and sentiment trends..."
+          "Analyzed 7,000+ orders to identify primary sales drivers, customer demographics, and purchasing behaviors using Tableau and MS Excel.",
+          "Identified key demographic segments (70% male, average age 26, 60% positive reviews) to guide targeted marketing strategies."
         ]
       }
     ]
   },
   "suggested_filename": "Rohini_Tembhurnikar_Data_Analyst",
-  "salary_benchmark": "₹12,000,000 - ₹18,000,000 / year (Glassdoor / AmbitionBox benchmark for Uber Data Analytics Specialist)",
+  "salary_benchmark": "₹12,000,000 - ₹18,000,000 / year (Glassdoor benchmark for Uber Data Analytics Specialist)",
   "clarifying_questions": []
 }
 """
@@ -86,7 +98,7 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, jd_text):
     {projects_text}
     """
 
-    models_to_try =['gemini-3.6-flash','gemini-2.5-flash', 'gemini-1.5-flash']
+    models_to_try = ['gemini-3.6-flash','gemini-2.5-flash', 'gemini-1.5-flash']
 
     for model_name in models_to_try:
         try:
