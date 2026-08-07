@@ -51,7 +51,7 @@ def analyze_and_optimize_resume(master_resume, projects, jd_text):
     """
 
     response = client.models.generate_content(
-        model='gemini-3.6-flashh',
+        model='gemini-3.6-flash',
         contents=user_input,
         config=types.GenerateContentConfig(
             system_instruction=AGENT_PROMPT,
