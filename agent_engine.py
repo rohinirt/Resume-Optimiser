@@ -2,9 +2,18 @@ import os
 import json
 from google import genai
 from google.genai import types 
+import streamlit as st
 
-# Initialize Gemini Client
-client = genai.Client(api_key=os.getenv("AQ.Ab8RN6KnlLb1h-08Z4FMSTQ3HPXaWzAgzfuR9W2rCzmgjPETxg"))
+
+# Fetch API Key securely
+api_key = st.secrets.get("GEMINI_API_KEY")
+
+if not api_key:
+    st.error("Missing GEMINI_API_KEY. Please set it in secrets.toml or Streamlit Cloud Secrets.")
+    st.stop()
+
+# Initialize Client
+client = genai.Client(api_key=api_key)
 
 AGENT_PROMPT = """
 You are an expert ATS (Applicant Tracking System) Specialist and Senior Data Analytics Hiring Manager.
@@ -42,7 +51,7 @@ def analyze_and_optimize_resume(master_resume, projects, jd_text):
     """
 
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flashh',
         contents=user_input,
         config=types.GenerateContentConfig(
             system_instruction=AGENT_PROMPT,
