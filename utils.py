@@ -32,10 +32,31 @@ def get_docx_preview_text(uploaded_file):
     lines = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(lines)
 
+def add_safe_heading(doc, text, level=1):
+    """Helper function to add headings safely without crashing on missing style names."""
+    p = doc.add_paragraph()
+    run = p.add_run(text)
+    run.bold = True
+    if level == 1:
+        run.font.size = docx.shared.Pt(16)
+    elif level == 2:
+        run.font.size = docx.shared.Pt(14)
+    else:
+        run.font.size = docx.shared.Pt(12)
+    return p
+
+def add_safe_bullet(doc, text):
+    """Helper function to add bullet points safely without style errors."""
+    try:
+        doc.add_paragraph(text, style='List Bullet')
+    except KeyError:
+        p = doc.add_paragraph(f"• {text}")
+        p.paragraph_format.left_indent = docx.shared.Inches(0.25)
+
 def build_updated_docx(original_file_bytes, results, selections):
     """
     Creates an updated Word document by modifying or generating content
-    while preserving document structure and font formatting where possible.
+    while preserving document structure safely.
     """
     output = BytesIO()
     
@@ -44,43 +65,41 @@ def build_updated_docx(original_file_bytes, results, selections):
     else:
         doc = docx.Document()
 
-    # If the document has existing content, we append tailored sections
-    # or replace matching sections cleanly.
-    doc.add_heading("ATS Optimized Resume Suggestions", level=1)
+    # Append Tailored Sections
+    add_safe_heading(doc, "ATS Optimized Resume Suggestions", level=1)
     
     sec2 = results.get("section_2_tailored_content", {})
 
     # 1. Professional Summary
     if selections.get("apply_summary", True):
-        doc.add_heading("Professional Summary", level=2)
+        add_safe_heading(doc, "Professional Summary", level=2)
         summary = sec2.get("professional_summary", {}).get("suggested_text", "")
-        p = doc.add_paragraph(summary)
-        p.style = doc.styles['Normal']
+        doc.add_paragraph(summary)
 
     # 2. Core Competencies / Skills
     if selections.get("apply_skills", True):
-        doc.add_heading("Core Competencies & Skills", level=2)
+        add_safe_heading(doc, "Core Competencies & Skills", level=2)
         skills = sec2.get("core_competencies", {}).get("suggested_skills", [])
         if skills:
             doc.add_paragraph(", ".join(skills))
 
     # 3. Professional Experience
     if selections.get("apply_exp", True):
-        doc.add_heading("Professional Experience", level=2)
+        add_safe_heading(doc, "Professional Experience", level=2)
         roles = sec2.get("professional_experience", [])
         for role in roles:
-            doc.add_heading(role.get("role_title", "Role"), level=3)
+            add_safe_heading(doc, role.get("role_title", "Role"), level=3)
             for bullet in role.get("suggested_bullets", []):
-                p = doc.add_paragraph(bullet, style='List Bullet')
+                add_safe_bullet(doc, bullet)
 
     # 4. Projects
     if selections.get("apply_projects", True):
-        doc.add_heading("Key Analytics Projects", level=2)
+        add_safe_heading(doc, "Key Analytics Projects", level=2)
         projects = sec2.get("projects", {}).get("selected_projects", [])
         for proj in projects:
-            doc.add_heading(proj.get("project_title", "Project"), level=3)
+            add_safe_heading(doc, proj.get("project_title", "Project"), level=3)
             for bullet in proj.get("suggested_bullets", []):
-                doc.add_paragraph(bullet, style='List Bullet')
+                add_safe_bullet(doc, bullet)
 
     doc.save(output)
     output.seek(0)
