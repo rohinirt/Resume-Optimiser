@@ -50,13 +50,26 @@ def analyze_and_optimize_resume(master_resume, projects, jd_text):
     {jd_text}
     """
 
-    response = client.models.generate_content(
-        model='gemini-3.6-flash',
-        contents=user_input,
-        config=types.GenerateContentConfig(
-            system_instruction=AGENT_PROMPT,
-            response_mime_type="application/json"
-        )
-    )
-    
-    return json.loads(response.text)
+    max_retries = 3
+    delay = 2  # seconds to wait before retrying
+
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=user_input,
+                config=types.GenerateContentConfig(
+                    system_instruction=AGENT_PROMPT,
+                    response_mime_type="application/json"
+                )
+            )
+            return json.loads(response.text)
+
+        except errors.APIError as e:
+            # Handle 503 Server Unavailable
+            if e.code == 503 and attempt < max_retries - 1:
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff (wait 2s, then 4s)
+                continue
+            else:
+                raise e
