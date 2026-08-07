@@ -1,1 +1,53 @@
+import os
+import json
+from google import genai
+from google.genai import types
 
+# Initialize Gemini Client
+client = genai.Client(api_key=os.getenv("AQ.Ab8RN6KnlLb1h-08Z4FMSTQ3HPXaWzAgzfuR9W2rCzmgjPETxg"))
+
+AGENT_PROMPT = """
+You are an expert ATS (Applicant Tracking System) Specialist and Senior Data Analytics Hiring Manager.
+Analyze the provided Master Resume, Projects, and Job Description (JD).
+
+Perform the following:
+1. Calculate Initial ATS Score (0-100), identify matching keywords, and missing keywords.
+2. Evaluate Role Fitness (Strengths, Gaps, Strategy).
+3. Rewrite the Resume Sections to align strictly with the JD (highlighting relevant Data Analytics tools like SQL, Python, Tableau, Power BI).
+4. Calculate Updated ATS Score post-alignment.
+5. Provide a standardized filename for saving (e.g., John_Doe_Data_Analyst_Google.docx).
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "initial_ats_score": 65,
+  "matching_keywords": ["Python", "SQL"],
+  "missing_keywords": ["A/B Testing", "Snowflake"],
+  "fitness_summary": "Strong core skills, missing enterprise data warehousing context.",
+  "suggested_rewrites": "Full updated text of the optimized resume...",
+  "updated_ats_score": 92,
+  "suggested_filename": "Jane_Doe_DataAnalyst_TargetCompany"
+}
+"""
+
+def analyze_and_optimize_resume(master_resume, projects, jd_text):
+    user_input = f"""
+    --- MASTER RESUME ---
+    {master_resume}
+
+    --- ADDITIONAL PROJECTS / EXP ---
+    {projects}
+
+    --- JOB DESCRIPTION ---
+    {jd_text}
+    """
+
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=user_input,
+        config=types.GenerateContentConfig(
+            system_instruction=AGENT_PROMPT,
+            response_mime_type="application/json"
+        )
+    )
+    
+    return json.loads(response.text)
