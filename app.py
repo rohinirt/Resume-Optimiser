@@ -10,30 +10,39 @@ from agent_engine import analyze_and_optimize_resume
 st.set_page_config(page_title="ATS Resume Tailor", layout="wide")
 
 st.title("🎯 AI ATS Resume Tailor")
-st.caption("Auto-align Master Resumes to JDs with in-place Word document editing.")
+st.caption("Upload Master Resume, Experience, and Project files to auto-align against Job Descriptions.")
 
-# ROW 1: INPUT DATA
-st.markdown("### 📥 Input Data")
-col1, col2, col3 = st.columns(3)
+# ROW 1: INPUT DATA SECTIONS WITH DEDICATED FILE UPLOADERS
+st.markdown("### 📥 Input Files & Job Description")
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    uploaded_file = st.file_uploader("Upload Master Resume (.pdf or .docx)", type=["pdf", "docx"])
+    uploaded_resume = st.file_uploader("1. Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
+
 with col2:
-    projects_input = st.text_area("Additional Projects / Work Experience", height=150)
+    uploaded_experience = st.file_uploader("2. Work Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
+
 with col3:
-    jd_input = st.text_area("Paste Job Description (JD)", height=150)
+    uploaded_projects = st.file_uploader("3. Projects Repository File (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
+
+with col4:
+    jd_input = st.text_area("4. Paste Job Description (JD)", height=140, placeholder="Paste JD requirements here...")
 
 analyze_btn = st.button("🚀 Analyze & Optimize Resume", type="primary", use_container_width=True)
 
-if analyze_btn and uploaded_file and jd_input:
-    with st.spinner("Analyzing resume and preparing in-place updates..."):
-        file_bytes = uploaded_file.read()
-        uploaded_file.seek(0)
+if analyze_btn and uploaded_resume and jd_input:
+    with st.spinner("Extracting content from files, running deep ATS keyword matching, and tailoring resume..."):
+        file_bytes = uploaded_resume.read()
+        uploaded_resume.seek(0)
         st.session_state['resume_bytes'] = file_bytes
-        st.session_state['file_type'] = uploaded_file.name.split(".")[-1].lower()
+        st.session_state['file_type'] = uploaded_resume.name.split(".")[-1].lower()
         
-        resume_text = extract_text_from_file(uploaded_file)
-        results = analyze_and_optimize_resume(resume_text, projects_input, jd_input)
+        # Parse text from all uploaded files
+        resume_text = extract_text_from_file(uploaded_resume)
+        experience_text = extract_text_from_file(uploaded_experience) if uploaded_experience else ""
+        projects_text = extract_text_from_file(uploaded_projects) if uploaded_projects else ""
+        
+        results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
         st.session_state['results'] = results
 
 st.markdown("---")
@@ -54,12 +63,12 @@ if 'results' in st.session_state:
         if st.session_state.get('file_type') == 'pdf':
             st.markdown(get_pdf_preview_html(st.session_state['resume_bytes']), unsafe_allow_html=True)
         else:
-            text_preview = get_docx_preview_text(uploaded_file) if uploaded_file else ""
+            text_preview = get_docx_preview_text(uploaded_resume) if uploaded_resume else ""
             st.text_area("Document View", text_preview, height=650, disabled=True)
 
     # RIGHT COLUMN: METRICS, FITNESS & SECTION CONTROLS
     with col_right:
-        st.subheader("⚡ Pre vs. Post Optimization Metrics")
+        st.subheader("⚡ ATS Scores & Detailed Keyword Match")
 
         m1, m2 = st.columns(2)
         m1.metric("Pre-ATS Score", f"{pre.get('ats_score', 0)}%")
@@ -67,18 +76,18 @@ if 'results' in st.session_state:
 
         k_col1, k_col2 = st.columns(2)
         with k_col1:
-            st.markdown("##### 🔴 Pre-Optimization")
+            st.markdown("##### 🔴 Pre-Optimization Keywords")
             st.success(f"**Matching:** {', '.join(pre.get('matching_keywords', []))}")
             st.error(f"**Missing:** {', '.join(pre.get('missing_keywords', []))}")
 
         with k_col2:
-            st.markdown("##### 🟢 Post-Optimization")
+            st.markdown("##### 🟢 Post-Optimization Keywords")
             st.success(f"**Matching:** {', '.join(post.get('matching_keywords', []))}")
             st.error(f"**Missing:** {', '.join(post.get('missing_keywords', []))}")
 
         st.markdown("---")
 
-        # RESTORED: ROLE FITNESS, GAPS & ALIGNMENT STRATEGY
+        # ROLE FITNESS & ALIGNMENT STRATEGY
         with st.expander("📌 **Role Fitness, Gaps & Alignment Strategy**", expanded=True):
             st.write("**Fitness Summary:**", fitness.get("role_fitness_summary", ""))
             st.write("**Missing Elements & Gaps:**", fitness.get("gaps_and_missing_elements", ""))
@@ -92,8 +101,10 @@ if 'results' in st.session_state:
         apply_summary = st.checkbox("Apply Professional Summary", value=True)
         st.info(sec2.get("professional_summary", ""))
 
-        apply_skills = st.checkbox("Apply Core Competencies / Skills", value=True)
-        st.write(", ".join(sec2.get("core_competencies", [])))
+        apply_skills = st.checkbox("Apply Grouped Core Competencies / Skills", value=True)
+        skills_grouped = sec2.get("core_competencies_grouped", {})
+        for category, skills in skills_grouped.items():
+            st.write(f"**{category}:** {skills}")
 
         apply_exp = st.checkbox("Apply Professional Experience Bullets", value=True)
         for role in sec2.get("professional_experience", []):
@@ -101,7 +112,7 @@ if 'results' in st.session_state:
             for b in role.get("bullets", []):
                 st.write(f"- {b}")
 
-        apply_projects = st.checkbox("Apply Projects Bullets", value=True)
+        apply_projects = st.checkbox("Apply Selected Projects Bullets", value=True)
         for proj in sec2.get("projects", []):
             st.caption(f"**{proj.get('project_title')}**")
             for b in proj.get("bullets", []):
@@ -123,7 +134,7 @@ if 'results' in st.session_state:
             selections
         )
 
-        filename = res.get("suggested_filename", "Rohini_Tembhurnikar_Resume") + ".docx"
+        filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
 
         st.download_button(
             label="📥 Download Updated Resume (.docx)",
