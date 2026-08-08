@@ -1,4 +1,3 @@
-#['gemini-3.6-flash','gemini-2.5-flash', 'gemini-1.5-flash']
 import os
 import json
 import time
@@ -10,83 +9,86 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 SYSTEM_INSTRUCTION = """
-You are an expert resume writer specializing in ATS optimization for Data Analytics roles.
+You are a Principal Data Analytics Hiring Manager and Elite ATS Optimization Specialist.
 
-Analyze the provided Job Description, Master Resume, and Additional Projects/Experience.
+Your task is to conduct an exhaustive analysis of the provided Job Description (JD), Master Resume, Additional Work Experience File, and Projects File, then rewrite and optimize the resume sections to achieve maximum ATS compliance and recruiter impact.
 
-CRITICAL CONSTRAINTS:
-1. Only use information present in the Master Resume or Additional Experience.
-2. Never invent projects, tools, achievements, certifications, or numbers.
-3. Rewrite bullet points using action verbs and the Google XYZ formula: "Accomplished [X], as measured by [Y], by doing [Z]".
+### EXHAUSTIVE ANALYSIS & TAILORING RULES:
+1. KEYWORD ANALYSIS:
+   - Extract ALL hard skills, programming languages, databases, visualization tools, cloud platforms, analytical methods (e.g., A/B testing, ETL, data modeling), domain knowledge, and operational KPIs from the JD.
+   - Perform a granular side-by-side keyword coverage assessment comparing the JD against the Master Resume and Experience/Project files.
+
+2. EXPERIENCE REWRITING (Google XYZ Formula):
+   - Analyze both the Master Resume and the Additional Work Experience file.
+   - Align role bullet points directly with the primary responsibilities and tools requested in the JD.
+   - Format bullet points strictly using: "Accomplished [X] as measured by [Y] by doing [Z]".
+   - Bold key tools, metrics, and high-impact terms within bullet points for recruiter scannability.
+
+3. PROJECT SELECTION:
+   - Analyze the Projects File and Master Resume to identify the top 2-3 projects that best mirror the domain, tech stack, and analytical challenges described in the JD.
+   - Rewrite project bullet points focusing on quantifiable business outcomes.
+
+4. CATEGORIZED SKILLS GROUPING:
+   - Maintain clean, grouped skill categories matching the structure of the Master Resume (e.g., "Programming & Databases", "Visualization & BI Tools", "Data Engineering & Workflows", "Core Competencies").
+   - Remove obsolete or unrequested skills if space needs optimization, and explicitly list missing JD skills that the user does not possess.
+
+5. ZERO HALLUCINATION CONSTRAINT:
+   - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
 
 OUTPUT REQUIREMENTS:
-Return ONLY a valid JSON object matching this schema:
+Return ONLY a valid JSON object following this exact structure:
 {
   "pre_optimization": {
-    "ats_score": 65,
-    "matching_keywords": ["SQL", "Python", "Tableau"],
-    "missing_keywords": ["Snowflake", "A/B Testing", "dbt"]
+    "ats_score": 60,
+    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery"],
+    "missing_keywords": ["Snowflake", "A/B Testing", "dbt", "Data Governance", "Product Analytics"]
   },
   "post_optimization": {
-    "ats_score": 92,
-    "matching_keywords": ["SQL", "Python", "Tableau", "A/B Testing", "ETL"],
+    "ats_score": 95,
+    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery", "ETL Pipelines", "A/B Testing", "SLA Monitoring"],
     "missing_keywords": ["Snowflake", "dbt"]
   },
   "fitness_and_strategy": {
-    "role_fitness_summary": "Strong technical foundation in SQL, Python, and ETL pipeline design from Uber experience. High fitness for senior/mid Data Analyst roles requiring operational analytics.",
-    "gaps_and_missing_elements": "Lacks explicit enterprise data warehouse exposure like Snowflake or dbt, though strong in BigQuery.",
+    "role_fitness_summary": "Detailed summary of candidate fitness relative to seniority, domain, and core requirements...",
+    "gaps_and_missing_elements": "Identified skill gaps or missing domain exposure...",
     "alignment_strategy": [
-      "Front-load Google XYZ metrics on high-volume ETL pipelines (80K-90K daily records).",
-      "Highlight cross-functional stakeholder leadership across global mega-regions.",
-      "Emphasize dashboard migrations (Looker Studio to Streamlit) to align with advanced analytics requirements."
+      "Strategic positioning point 1...",
+      "Strategic positioning point 2..."
     ]
   },
   "section_2_tailored_content": {
-    "professional_summary": "Detail-Oriented Data Analyst with hands-on experience at Uber driving high-impact analytics across automated ETL pipelines, interactive dashboards, and large-scale data systems. Skilled in SQL, BigQuery, Python, Looker Studio, and Streamlit to optimize operational SLAs.",
-    "core_competencies": ["SQL", "BigQuery", "Python", "Tableau", "Looker Studio", "ETL Pipelines", "A/B Testing"],
+    "professional_summary": "Tailored, high-impact 2-3 sentence summary aligned with JD keywords...",
+    "core_competencies_grouped": {
+      "Programming & Databases": "SQL, BigQuery, Python (Pandas, NumPy)",
+      "Visualization & BI Tools": "Looker Studio, Tableau, Streamlit, Power BI, Excel",
+      "Data Engineering & Workflows": "Automated ETL Pipelines, Query Builder",
+      "Core Competencies": "Data Modelling, Pipeline Troubleshooting, Root Cause Analysis, SLA Tracking"
+    },
     "professional_experience": [
       {
         "role_title": "Data Analytics Specialist, Uber",
         "bullets": [
-          "Engineered and maintained automated ETL data pipelines using Google Sheets, Python, SQL, and BigQuery to process 80K–90K+ records daily/weekly, reducing performance tracking cycle times by 40%.",
-          "Developed and deployed interactive Looker Studio dashboards integrated with Row-Level Security for Identity Operations enabling 200+ global users to self-serve insights.",
-          "Rebuilt and migrated core analytics dashboards from Looker Studio to Streamlit using Cursor AI, improving dashboard load times and key metric discovery by 30%.",
-          "Designed automated scorecards using Google Sheets and SQL to monitor vendor compliance and track operational SLAs across external BPO partners."
-        ]
-      },
-      {
-        "role_title": "Data Analyst Intern, TopN Analytics",
-        "bullets": [
-          "Accelerated reporting efficiency by 20% for 3+ stakeholder teams by building 4+ interactive Tableau and Looker Studio dashboards.",
-          "Improved data accuracy by 85% by scraping and processing 1,000+ rows of real-time data using Python (BeautifulSoup, Pandas, NumPy).",
-          "Increased cross-functional dashboard adoption by collaborating directly with teams to translate requirements into analytical solutions."
+          "Engineered automated ETL data pipelines using Google Sheets, Python, SQL, and BigQuery processing 80K–90K+ records daily/weekly, reducing performance tracking cycle times by 40%.",
+          "Deployed interactive Looker Studio dashboards integrated with Row-Level Security for Identity Operations enabling 200+ global users to self-serve insights."
         ]
       }
     ],
     "projects": [
       {
-        "project_title": "Retail Price Optimization",
+        "project_title": "Retail Price Optimization | Python",
         "bullets": [
-          "Yielded a 28% average revenue increase per product by developing a Random Forest model in Python to forecast demand and price elasticity.",
-          "Quantified business impact across pricing strategies by constructing an interactive price optimization simulator."
-        ]
-      },
-      {
-        "project_title": "Merchandise Sales Dashboard",
-        "bullets": [
-          "Analyzed 7,000+ orders to identify primary sales drivers, customer demographics, and purchasing behaviors using Tableau and MS Excel.",
-          "Identified key demographic segments (70% male, average age 26, 60% positive reviews) to guide targeted marketing strategies."
+          "Yielded a 28% average revenue increase per product by developing a Random Forest model in Python to forecast demand and calculate price elasticity."
         ]
       }
     ]
   },
-  "suggested_filename": "Rohini_Tembhurnikar_Data_Analyst",
-  "salary_benchmark": "₹12,000,000 - ₹18,000,000 / year (Glassdoor benchmark for Uber Data Analytics Specialist)",
+  "suggested_filename": "Candidate_Data_Analyst_TargetCompany",
+  "salary_benchmark": "Estimated market compensation benchmark with source reference",
   "clarifying_questions": []
 }
 """
 
-def analyze_and_optimize_resume(master_resume_text, projects_text, jd_text):
+def analyze_and_optimize_resume(master_resume_text, projects_text, experience_text, jd_text):
     user_input = f"""
     --- JOB DESCRIPTION ---
     {jd_text}
@@ -94,11 +96,14 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, jd_text):
     --- MASTER RESUME ---
     {master_resume_text}
 
-    --- ADDITIONAL PROJECTS / EXPERIENCE ---
+    --- ADDITIONAL WORK EXPERIENCE FILE CONTENT ---
+    {experience_text}
+
+    --- PROJECTS FILE CONTENT ---
     {projects_text}
     """
 
-    models_to_try = ['gemini-3.6-flash','gemini-2.5-flash', 'gemini-1.5-flash']
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
 
     for model_name in models_to_try:
         try:
@@ -112,9 +117,9 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, jd_text):
             )
             return json.loads(response.text)
         except errors.APIError as e:
-            if e.code == 503:
-                time.sleep(2)
+            if e.code == 503 or e.code == 404:
+                time.sleep(1.5)
                 continue
             raise e
 
-    raise Exception("Google AI servers are currently busy. Please try again.")
+    raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
