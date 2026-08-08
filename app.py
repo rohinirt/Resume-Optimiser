@@ -130,6 +130,7 @@ if 'results' in st.session_state:
 
         updated_docx = build_updated_docx_inplace(
             st.session_state.get('resume_bytes', b""),
+            st.session_state.get('file_type', 'pdf'),
             res,
             selections
         )
