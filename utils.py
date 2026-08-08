@@ -4,6 +4,8 @@ from io import BytesIO
 from pypdf import PdfReader
 
 def extract_text_from_file(uploaded_file):
+    if not uploaded_file:
+        return ""
     text = ""
     uploaded_file.seek(0)
     if uploaded_file.name.endswith(".pdf"):
@@ -29,22 +31,18 @@ def get_docx_preview_text(uploaded_file):
     return "\n\n".join(lines)
 
 def replace_paragraph_text_keep_formatting(paragraph, new_text):
-    """Replaces paragraph text while preserving existing run formatting (font, size, bold)."""
     if len(paragraph.runs) > 0:
         first_run = paragraph.runs[0]
-        # Keep font properties of first run
         font_name = first_run.font.name
         font_size = first_run.font.size
         bold = first_run.bold
         italic = first_run.italic
         
-        # Clear all runs in paragraph
         p_elem = paragraph._p
         for child in list(p_elem):
             if child.tag.endswith('r'):
                 p_elem.remove(child)
                 
-        # Create single updated run with preserved style
         new_run = paragraph.add_run(new_text)
         new_run.font.name = font_name
         new_run.font.size = font_size
@@ -54,7 +52,6 @@ def replace_paragraph_text_keep_formatting(paragraph, new_text):
         paragraph.text = new_text
 
 def build_updated_docx_inplace(original_file_bytes, results, selections):
-    """Edits paragraphs IN-PLACE in the original Word document without creating duplicate sections."""
     output = BytesIO()
     
     if not original_file_bytes or len(original_file_bytes) == 0:
@@ -63,33 +60,33 @@ def build_updated_docx_inplace(original_file_bytes, results, selections):
         doc = docx.Document(BytesIO(original_file_bytes))
 
     sec2 = results.get("section_2_tailored_content", {})
-    
-    # Track section indices
     p_texts = [p.text.strip().upper() for p in doc.paragraphs]
 
-    # 1. PROFESSIONAL SUMMARY IN-PLACE REPLACE
+    # 1. SUMMARY
     if selections.get("apply_summary", True) and "PROFESSIONAL SUMMARY" in p_texts:
         idx = p_texts.index("PROFESSIONAL SUMMARY")
         if idx + 1 < len(doc.paragraphs):
-            new_summary = sec2.get("professional_summary", "")
-            replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], new_summary)
+            replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], sec2.get("professional_summary", ""))
 
-    # 2. TECHNICAL SKILLS / CORE COMPETENCIES IN-PLACE REPLACE
+    # 2. GROUPED SKILLS IN-PLACE REPLACE
     if selections.get("apply_skills", True):
         for header in ["TECHNICAL SKILLS", "CORE COMPETENCIES", "SKILLS"]:
             if header in p_texts:
                 idx = p_texts.index(header)
-                if idx + 1 < len(doc.paragraphs):
-                    skills_list = ", ".join(sec2.get("core_competencies", []))
-                    replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], skills_list)
+                grouped_skills = sec2.get("core_competencies_grouped", {})
+                offset = 1
+                for cat, val in grouped_skills.items():
+                    if idx + offset < len(doc.paragraphs):
+                        text_line = f"{cat}: {val}"
+                        replace_paragraph_text_keep_formatting(doc.paragraphs[idx + offset], text_line)
+                        offset += 1
                 break
 
-    # 3. WORK EXPERIENCE IN-PLACE BULLET REPLACEMENT
+    # 3. EXPERIENCE BULLETS IN-PLACE REPLACE
     if selections.get("apply_exp", True) and "WORK EXPERIENCE" in p_texts:
         exp_idx = p_texts.index("WORK EXPERIENCE")
         exp_data = sec2.get("professional_experience", [])
         
-        # Collect generated bullets
         all_bullets = []
         for role in exp_data:
             all_bullets.extend(role.get("bullets", []))
@@ -97,17 +94,14 @@ def build_updated_docx_inplace(original_file_bytes, results, selections):
         bullet_counter = 0
         for i in range(exp_idx + 1, len(doc.paragraphs)):
             text = doc.paragraphs[i].text.strip()
-            # Stop if we hit the next major section header
             if text.upper() in ["PROJECTS", "EDUCATION", "CERTIFICATIONS"]:
                 break
-            
-            # If paragraph is a bullet point or description line
-            if len(text) > 15 and not any(company in text for company in ["Uber", "TopN Analytics", "Jan 202", "Oct 202"]):
+            if len(text) > 15 and not any(k in text for k in ["Uber", "TopN Analytics", "Jan 202", "Oct 202"]):
                 if bullet_counter < len(all_bullets):
                     replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_bullets[bullet_counter])
                     bullet_counter += 1
 
-    # 4. PROJECTS IN-PLACE BULLET REPLACEMENT
+    # 4. PROJECTS IN-PLACE REPLACE
     if selections.get("apply_projects", True) and "PROJECTS" in p_texts:
         proj_idx = p_texts.index("PROJECTS")
         proj_data = sec2.get("projects", [])
@@ -121,7 +115,7 @@ def build_updated_docx_inplace(original_file_bytes, results, selections):
             text = doc.paragraphs[i].text.strip()
             if text.upper() in ["EDUCATION", "CERTIFICATIONS"]:
                 break
-            if len(text) > 15 and not any(title in text for title in ["Dashboard", "Optimization", "Tableau", "Python"]):
+            if len(text) > 15 and not any(k in text for k in ["Dashboard", "Optimization", "Tableau", "Python"]):
                 if proj_counter < len(all_proj_bullets):
                     replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_proj_bullets[proj_counter])
                     proj_counter += 1
