@@ -262,7 +262,7 @@ elif st.session_state['page'] == 'results':
     view_left, view_right = st.columns([1, 1])
 
     with view_left:
-        st.markdown("##### 👁️ Original Master Resume")
+        st.markdown("##### Your Resume")
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
         
