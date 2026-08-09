@@ -21,7 +21,7 @@ def extract_text_from_file(uploaded_file):
     return text
 
 def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
-    """Renders the Original Master Resume in the EXACT same executive A4 template as the optimized preview."""
+    """Renders the Original Master Resume using Arial typography and bold highlighting on headings, companies, and roles."""
     paragraphs_html = ""
     if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
         try:
@@ -30,20 +30,27 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
                 txt = html.escape(p.text.strip())
                 if txt:
                     if txt.isupper() and len(txt) < 40:
-                        paragraphs_html += f'<div style="color: #1e3a8a; font-size: 0.95rem; margin-top: 18px; margin-bottom: 8px; border-bottom: 1.5px solid #0f172a; padding-bottom: 4px; font-weight: 700; text-transform: uppercase; font-family: Segoe UI, sans-serif;">{txt}</div>'
+                        paragraphs_html += f'<div style="color: #1e3a8a; font-size: 0.95rem; margin-top: 18px; margin-bottom: 8px; border-bottom: 1.5px solid #0f172a; padding-bottom: 4px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
                     else:
-                        paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.55; color: #334155; margin-bottom: 8px; font-family: Segoe UI, sans-serif;">{txt}</p>'
+                        # Bold headings, company titles, and tools in plain text paragraphs
+                        for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
+                            if keyword in txt:
+                                txt = txt.replace(keyword, f'<strong>{keyword}</strong>')
+                        paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.55; color: #334155; margin-bottom: 8px; font-family: Arial, sans-serif;">{txt}</p>'
         except Exception:
-            paragraphs_html = f'<p style="font-size:0.88rem;">{html.escape(str(content_text_or_bytes))}</p>'
+            paragraphs_html = f'<p style="font-size:0.88rem; font-family: Arial, sans-serif;">{html.escape(str(content_text_or_bytes))}</p>'
     else:
         lines = str(content_text_or_bytes).split('\n')
         for line in lines:
             txt = html.escape(line.strip())
             if txt:
                 if txt.isupper() and len(txt) < 40:
-                    paragraphs_html += f'<div style="color: #1e3a8a; font-size: 0.95rem; margin-top: 18px; margin-bottom: 8px; border-bottom: 1.5px solid #0f172a; padding-bottom: 4px; font-weight: 700; text-transform: uppercase; font-family: Segoe UI, sans-serif;">{txt}</div>'
+                    paragraphs_html += f'<div style="color: #1e3a8a; font-size: 0.95rem; margin-top: 18px; margin-bottom: 8px; border-bottom: 1.5px solid #0f172a; padding-bottom: 4px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
                 else:
-                    paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.55; color: #334155; margin-bottom: 8px; font-family: Segoe UI, sans-serif;">{txt}</p>'
+                    for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
+                        if keyword in txt:
+                            txt = txt.replace(keyword, f'<strong>{keyword}</strong>')
+                    paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.55; color: #334155; margin-bottom: 8px; font-family: Arial, sans-serif;">{txt}</p>'
 
     return f"""
     <!DOCTYPE html>
@@ -51,7 +58,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     <head>
         <style>
             body {{
-                font-family: 'Segoe UI', Arial, sans-serif;
+                font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
                 background-color: #ffffff;
                 color: #1e293b;
                 margin: 0;
@@ -67,16 +74,22 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
 
 def generate_paper_sheet_tailored_html(results):
     """
-    Renders an executive A4-styled HTML document with styled headers, 
-    Google XYZ bullets, and yellow highlights + underlines on modified keywords.
+    Renders an executive A4-styled HTML document in Arial font with Contact Info, 
+    Education, Certifications, and yellow highlights/underlines on modified keywords.
     """
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
+    contact = sec2.get("contact_info", {})
+    cand_name = html.escape(str(contact.get("name", "ROHINI TEMBHURNIKAR")))
+    cand_details = html.escape(str(contact.get("details", "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | Hyderabad | LinkedIn | GitHub")))
+
     summary = html.escape(str(sec2.get("professional_summary", "")))
     skills_grouped = sec2.get("core_competencies_grouped", {})
     exp_list = sec2.get("professional_experience", [])
     proj_list = sec2.get("projects", [])
+    edu_list = sec2.get("education", [])
+    cert_list = sec2.get("certifications", [])
 
     # Apply inline yellow highlights AND underlines to keywords
     for kw in keywords:
@@ -113,22 +126,41 @@ def generate_paper_sheet_tailored_html(results):
             proj_html += f'<li style="margin-bottom: 6px;">{clean_b}</li>'
         proj_html += '</ul>'
 
+    edu_html = "".join([f'<div style="font-size: 0.88rem; margin-bottom: 4px;">{html.escape(str(e))}</div>' for e in edu_list])
+    cert_html = "".join([f'<div style="font-size: 0.88rem; margin-bottom: 4px;">{html.escape(str(c))}</div>' for c in cert_list])
+
     full_document_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <style>
             body {{
-                font-family: 'Segoe UI', Arial, sans-serif;
+                font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
                 background-color: #ffffff;
                 color: #1e293b;
                 margin: 0;
                 padding: 30px;
             }}
+            .header-name {{
+                font-size: 1.5rem;
+                font-weight: 800;
+                color: #0f172a;
+                text-align: center;
+                letter-spacing: 0.5px;
+            }}
+            .header-contact {{
+                font-size: 0.82rem;
+                color: #475569;
+                text-align: center;
+                margin-top: 4px;
+                margin-bottom: 18px;
+                border-bottom: 2px solid #0f172a;
+                padding-bottom: 10px;
+            }}
             .section-title {{
                 color: #1e3a8a;
-                font-size: 0.98rem;
-                margin-top: 18px;
+                font-size: 0.95rem;
+                margin-top: 16px;
                 margin-bottom: 8px;
                 border-bottom: 1.5px solid #0f172a;
                 padding-bottom: 4px;
@@ -139,8 +171,11 @@ def generate_paper_sheet_tailored_html(results):
         </style>
     </head>
     <body>
+        <div class="header-name">{cand_name}</div>
+        <div class="header-contact">{cand_details}</div>
+
         <div class="section-title">Professional Summary</div>
-        <p style="font-size: 0.88rem; line-height: 1.6; color: #334155; margin-bottom: 18px;">{summary}</p>
+        <p style="font-size: 0.88rem; line-height: 1.6; color: #334155; margin-bottom: 16px;">{summary}</p>
 
         <div class="section-title">Technical Skills & Competencies</div>
         <div>{skills_html}</div>
@@ -150,6 +185,12 @@ def generate_paper_sheet_tailored_html(results):
 
         <div class="section-title">Key Projects</div>
         <div>{proj_html}</div>
+
+        <div class="section-title">Education</div>
+        <div>{edu_html}</div>
+
+        <div class="section-title">Certifications</div>
+        <div>{cert_html}</div>
     </body>
     </html>
     """
@@ -158,7 +199,7 @@ def generate_paper_sheet_tailored_html(results):
 def replace_paragraph_text_keep_formatting(paragraph, new_text):
     if len(paragraph.runs) > 0:
         first_run = paragraph.runs[0]
-        font_name = first_run.font.name
+        font_name = first_run.font.name or "Arial"
         font_size = first_run.font.size
         bold = first_run.bold
         italic = first_run.italic
@@ -177,7 +218,7 @@ def replace_paragraph_text_keep_formatting(paragraph, new_text):
         paragraph.text = new_text
 
 def build_updated_docx_inplace(original_file_bytes, file_type, results, selections):
-    """Generates the downloadable .docx file WITHOUT web highlights or underlines."""
+    """Generates the clean downloadable .docx file containing all sections without web highlights/underlines."""
     output = BytesIO()
     is_docx = (file_type == 'docx') and original_file_bytes and len(original_file_bytes) > 0
 
@@ -244,36 +285,64 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                         proj_counter += 1
 
     else:
-        doc.add_heading("TAILORED RESUME", level=1)
+        # Generate complete document structure for PDF uploads
+        contact = sec2.get("contact_info", {})
+        head = doc.add_heading(contact.get("name", "ROHINI TEMBHURNIKAR"), level=1)
+        head.style.font.name = "Arial"
+        
+        p_contact = doc.add_paragraph(contact.get("details", ""))
+        p_contact.style.font.name = "Arial"
 
         if selections.get("apply_summary", True):
-            doc.add_heading("PROFESSIONAL SUMMARY", level=2)
-            doc.add_paragraph(sec2.get("professional_summary", ""))
+            h = doc.add_heading("PROFESSIONAL SUMMARY", level=2)
+            h.style.font.name = "Arial"
+            p = doc.add_paragraph(sec2.get("professional_summary", ""))
+            p.style.font.name = "Arial"
 
         if selections.get("apply_skills", True):
-            doc.add_heading("TECHNICAL SKILLS", level=2)
+            h = doc.add_heading("TECHNICAL SKILLS", level=2)
+            h.style.font.name = "Arial"
             grouped_skills = sec2.get("core_competencies_grouped", {})
             for cat, val in grouped_skills.items():
                 p = doc.add_paragraph()
+                p.style.font.name = "Arial"
                 r = p.add_run(f"{cat}: ")
                 r.bold = True
                 p.add_run(str(val))
 
         if selections.get("apply_exp", True):
-            doc.add_heading("WORK EXPERIENCE", level=2)
+            h = doc.add_heading("WORK EXPERIENCE", level=2)
+            h.style.font.name = "Arial"
             for role in sec2.get("professional_experience", []):
-                doc.add_heading(role.get("role_title", "Role"), level=3)
+                rh = doc.add_heading(role.get("role_title", "Role"), level=3)
+                rh.style.font.name = "Arial"
                 for b in role.get("bullets", []):
                     p = doc.add_paragraph(b)
+                    p.style.font.name = "Arial"
                     p.paragraph_format.left_indent = docx.shared.Inches(0.25)
 
         if selections.get("apply_projects", True):
-            doc.add_heading("PROJECTS", level=2)
+            h = doc.add_heading("PROJECTS", level=2)
+            h.style.font.name = "Arial"
             for proj in sec2.get("projects", []):
-                doc.add_heading(proj.get("project_title", "Project"), level=3)
+                ph = doc.add_heading(proj.get("project_title", "Project"), level=3)
+                ph.style.font.name = "Arial"
                 for b in proj.get("bullets", []):
                     p = doc.add_paragraph(b)
+                    p.style.font.name = "Arial"
                     p.paragraph_format.left_indent = docx.shared.Inches(0.25)
+
+        h_edu = doc.add_heading("EDUCATION", level=2)
+        h_edu.style.font.name = "Arial"
+        for edu in sec2.get("education", []):
+            p = doc.add_paragraph(edu)
+            p.style.font.name = "Arial"
+
+        h_cert = doc.add_heading("CERTIFICATIONS", level=2)
+        h_cert.style.font.name = "Arial"
+        for cert in sec2.get("certifications", []):
+            p = doc.add_paragraph(cert)
+            p.style.font.name = "Arial"
 
     doc.save(output)
     output.seek(0)
