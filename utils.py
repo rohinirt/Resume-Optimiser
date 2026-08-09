@@ -373,7 +373,7 @@ def generate_new_formatted_docx(results):
     p_contact.paragraph_format.space_after = Pt(8)
     r_contact = p_contact.add_run(contact.get("details", ""))
     r_contact.font.name = "Arial"
-    r_contact.font.size = Pt(8.5)
+    r_contact.font.size = Pt(9)
     r_contact.font.color.rgb = RGBColor(0, 0, 0)
 
     def add_section_header(title_text):
