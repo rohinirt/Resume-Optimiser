@@ -204,7 +204,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     """
 
 def generate_paper_sheet_tailored_html(results):
-    """Renders Tailored Resume HTML preview matching the exact CSS and structure."""
+    """Renders Tailored Resume HTML preview with properly formatted dates and selective education/cert bolding."""
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
@@ -249,23 +249,31 @@ def generate_paper_sheet_tailored_html(results):
             proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_b}</li>'
         proj_html += '</ul>'
 
+    # Education: Bold ONLY degree name (part before comma or pipe)
     edu_html = ""
     for e in edu_list:
-        txt = html.escape(str(e))
+        txt = str(e)
         if "," in txt:
             parts = txt.split(",", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>,{parts[1]}</div>'
+            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
+        elif "|" in txt:
+            parts = txt.split("|", 1)
+            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
         else:
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{txt}</strong></div>'
+            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
 
+    # Certifications: Bold ONLY certification name
     cert_html = ""
     for c in cert_list:
-        txt = html.escape(str(c))
+        txt = str(c)
         if "," in txt:
             parts = txt.split(",", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>,{parts[1]}</div>'
+            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
+        elif "|" in txt:
+            parts = txt.split("|", 1)
+            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
         else:
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{txt}</strong></div>'
+            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
 
     full_document_html = f"""
     <!DOCTYPE html>
@@ -333,15 +341,12 @@ def generate_paper_sheet_tailored_html(results):
     return full_document_html
 
 def generate_new_formatted_docx(results):
-    """
-    Generates a 1-Page A4 Word (.docx) document matching the previews.
-    """
+    """Generates 1-Page A4 Word document with exact selective bolding for Education/Certifications."""
     output = BytesIO()
     doc = docx.Document()
 
     sec2 = results.get("section_2_tailored_content", {})
 
-    # Strict 1-Page A4 Margins (0.5 Inches)
     section = doc.sections[0]
     section.page_width = Inches(8.5)
     section.page_height = Inches(11.0)
@@ -350,7 +355,7 @@ def generate_new_formatted_docx(results):
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # 1. CANDIDATE HEADER
+    # Header
     contact = sec2.get("contact_info", {})
     p_name = doc.add_paragraph()
     p_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -383,7 +388,7 @@ def generate_new_formatted_docx(results):
         add_bottom_border(p, color_hex="0F172A", size="8")
         return p
 
-    # 2. PROFESSIONAL SUMMARY
+    # Summary
     add_section_header("PROFESSIONAL SUMMARY")
     p_sum = doc.add_paragraph()
     p_sum.paragraph_format.space_before = Pt(0)
@@ -398,7 +403,7 @@ def generate_new_formatted_docx(results):
         r_sum.font.bold = is_bold
         r_sum.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 3. TECHNICAL SKILLS
+    # Technical Skills
     add_section_header("TECHNICAL SKILLS")
     grouped_skills = sec2.get("core_competencies_grouped", {})
     for cat, val in grouped_skills.items():
@@ -418,7 +423,7 @@ def generate_new_formatted_docx(results):
         r_val.font.bold = False
         r_val.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 4. WORK EXPERIENCE
+    # Work Experience
     add_section_header("WORK EXPERIENCE")
     for role in sec2.get("professional_experience", []):
         p_role = doc.add_paragraph()
@@ -444,7 +449,7 @@ def generate_new_formatted_docx(results):
                 r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 5. PROJECTS
+    # Projects
     add_section_header("PROJECTS")
     for proj in sec2.get("projects", []):
         p_proj = doc.add_paragraph()
@@ -470,7 +475,7 @@ def generate_new_formatted_docx(results):
                 r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 6. EDUCATION (Fixed Pt(9) font size on details run)
+    # Education (Fix: Only bold Degree Name at 9.5pt, rest regular text at 8.8pt)
     add_section_header("EDUCATION")
     for edu in sec2.get("education", []):
         p_edu = doc.add_paragraph()
@@ -480,25 +485,38 @@ def generate_new_formatted_docx(results):
         txt = str(edu)
         if "," in txt:
             parts = txt.split(",", 1)
-            r_deg = p_edu.add_run(parts[0])
+            r_deg = p_edu.add_run(parts[0].strip())
             r_deg.font.name = "Arial"
             r_deg.font.size = Pt(9.5)
             r_deg.font.bold = True
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
             
-            r_rest = p_edu.add_run(f",{parts[1]}")
+            r_rest = p_edu.add_run(f", {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9.0) # Fixed from Pt(0)
+            r_rest.font.size = Pt(8.8)
+            r_rest.font.bold = False
+            r_rest.font.color.rgb = RGBColor(0, 0, 0)
+        elif "|" in txt:
+            parts = txt.split("|", 1)
+            r_deg = p_edu.add_run(parts[0].strip())
+            r_deg.font.name = "Arial"
+            r_deg.font.size = Pt(9.5)
+            r_deg.font.bold = True
+            r_deg.font.color.rgb = RGBColor(0, 0, 0)
+            
+            r_rest = p_edu.add_run(f" | {parts[1].strip()}")
+            r_rest.font.name = "Arial"
+            r_rest.font.size = Pt(8.8)
             r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_deg = p_edu.add_run(txt)
             r_deg.font.name = "Arial"
-            r_deg.font.size = Pt(9.5)
-            r_deg.font.bold = True
+            r_deg.font.size = Pt(8.8)
+            r_deg.font.bold = False
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 7. CERTIFICATIONS
+    # Certifications (Fix: Only bold Certificate Name at 9.5pt, rest regular text at 8.8pt)
     add_section_header("CERTIFICATIONS")
     for cert in sec2.get("certifications", []):
         p_cert = doc.add_paragraph()
@@ -508,24 +526,38 @@ def generate_new_formatted_docx(results):
         txt = str(cert)
         if "," in txt:
             parts = txt.split(",", 1)
-            r_cert = p_cert.add_run(parts[0])
+            r_cert = p_cert.add_run(parts[0].strip())
             r_cert.font.name = "Arial"
             r_cert.font.size = Pt(9.5)
             r_cert.font.bold = True
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
             
-            r_rest = p_cert.add_run(f",{parts[1]}")
+            r_rest = p_cert.add_run(f", {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9.0)
+            r_rest.font.size = Pt(8.8)
+            r_rest.font.bold = False
+            r_rest.font.color.rgb = RGBColor(0, 0, 0)
+        elif "|" in txt:
+            parts = txt.split("|", 1)
+            r_cert = p_cert.add_run(parts[0].strip())
+            r_cert.font.name = "Arial"
+            r_cert.font.size = Pt(9.5)
+            r_cert.font.bold = True
+            r_cert.font.color.rgb = RGBColor(0, 0, 0)
+            
+            r_rest = p_cert.add_run(f" | {parts[1].strip()}")
+            r_rest.font.name = "Arial"
+            r_rest.font.size = Pt(8.8)
             r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_cert = p_cert.add_run(txt)
             r_cert.font.name = "Arial"
-            r_cert.font.size = Pt(9.5)
-            r_cert.font.bold = True
+            r_cert.font.size = Pt(8.8)
+            r_cert.font.bold = False
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
 
     doc.save(output)
     output.seek(0)
     return output
+
