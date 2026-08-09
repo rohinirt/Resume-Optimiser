@@ -4,7 +4,7 @@ from utils import (
     extract_text_from_file, 
     generate_standard_resume_sheet_html,
     generate_paper_sheet_tailored_html,
-    build_updated_docx_inplace
+    generate_new_formatted_docx
 )
 from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
@@ -153,7 +153,7 @@ if st.session_state['page'] == 'landing':
     with f3:
         st.markdown("""<div class="feature-card"><div class="feature-icon">👁️</div><strong>3. Side-by-Side View</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Compare original document vs highlighted paper preview.</p></div>""", unsafe_allow_html=True)
     with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-icon">🌐</div><strong>4. Live Search & Export</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Searches real web salary data & exports in-place formatted .docx.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-icon">🌐</div><strong>4. Live Search & Export</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Searches real web salary data & exports formatted .docx.</p></div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 📥 Step 1: Upload Files & Target Job Description")
@@ -216,7 +216,6 @@ elif st.session_state['page'] == 'results':
     pre = res.get("pre_optimization", {})
     post = res.get("post_optimization", {})
     fitness = res.get("fitness_and_strategy", {})
-    sec2 = res.get("section_2_tailored_content", {})
 
     # METRICS ROW
     m_col1, m_col2 = st.columns([1, 1])
@@ -258,7 +257,7 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SIDE BY SIDE RESUME VIEWERS (WITH TOP RIGHT BLUE DOWNLOAD BUTTON)
+    # SIDE BY SIDE RESUME VIEWERS
     st.markdown("### 📄 Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
@@ -267,7 +266,6 @@ elif st.session_state['page'] == 'results':
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
         
-        # Build Standardized A4 HTML Template for Original Resume
         if file_type == 'docx':
             orig_html = generate_standard_resume_sheet_html("Original Resume", resume_bytes, is_docx_file=True)
         else:
@@ -277,18 +275,12 @@ elif st.session_state['page'] == 'results':
         components.html(orig_html, height=1050, scrolling=True)
 
     with view_right:
-        # TOP-RIGHT DOWNLOAD BUTTON & HEADER
         hdr_col1, hdr_col2 = st.columns([1.5, 1])
         with hdr_col1:
             st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
         with hdr_col2:
-            selections = {"apply_summary": True, "apply_skills": True, "apply_exp": True, "apply_projects": True}
-            updated_docx = build_updated_docx_inplace(
-                st.session_state.get('resume_bytes', b""),
-                st.session_state.get('file_type', 'pdf'),
-                res,
-                selections
-            )
+            # GENERATE BRAND NEW BEAUTIFULLY FORMATTED DOCX MATCHING PREVIEW
+            updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
             st.download_button(
                 label="📥 Download Optimized Resume (.docx)",
@@ -299,13 +291,12 @@ elif st.session_state['page'] == 'results':
                 use_container_width=True
             )
 
-        # OPTIMIZED RESUME SHEET
         paper_html = generate_paper_sheet_tailored_html(res)
         components.html(paper_html, height=1050, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # REPLACED SECTION EDITOR WITH SUMMARY OF CHANGES MADE
+    # SUMMARY OF CHANGES
     st.markdown("### 📋 Summary of Key Resume Enhancements")
     st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
     
