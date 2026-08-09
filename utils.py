@@ -5,6 +5,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import base64
 import html
+import re
 from io import BytesIO
 from pypdf import PdfReader
 
@@ -25,7 +26,7 @@ def extract_text_from_file(uploaded_file):
     return text
 
 def add_bottom_border(paragraph, color_hex="0F172A", size="12"):
-    """Adds a horizontal line directly under section headings."""
+    """Adds a sleek horizontal line directly under section headings."""
     pPr = paragraph._p.get_or_add_pPr()
     pBdr = OxmlElement('w:pBdr')
     bottom = OxmlElement('w:bottom')
@@ -36,18 +37,43 @@ def add_bottom_border(paragraph, color_hex="0F172A", size="12"):
     pBdr.append(bottom)
     pPr.append(pBdr)
 
+def clean_markdown_bold_spans(text):
+    """
+    Safely parses markdown **bold** pairs to prevent trailing bold leaks.
+    Returns a list of tuples: (text_substring, is_bold_boolean)
+    """
+    if not text:
+        return []
+    
+    pattern = re.compile(r'\*\*(.*?)\*\*')
+    spans = []
+    last_idx = 0
+    
+    for match in pattern.finditer(text):
+        start, end = match.span()
+        if start > last_idx:
+            spans.append((text[last_idx:start], False))
+        spans.append((match.group(1), True))
+        last_idx = end
+        
+    if last_idx < len(text):
+        remaining = text[last_idx:].replace("**", "") # strip unmatched orphan asterisks
+        if remaining:
+            spans.append((remaining, False))
+            
+    return spans
+
 def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
-    """Renders the Original Master Resume in Arial typography, black body text, and blue 10pt headers."""
+    """Renders Original Master Resume with uniform blue 10pt section borders and black body text."""
     paragraphs_html = ""
     if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
         try:
             doc = docx.Document(BytesIO(content_text_or_bytes))
-            for idx, p in enumerate(doc.paragraphs):
+            for p in doc.paragraphs:
                 txt = html.escape(p.text.strip())
                 if txt:
                     if txt.isupper() and len(txt) < 40:
-                        border_style = "" if "SUMMARY" in txt else "border-bottom: 1.5px solid #0f172a; padding-bottom: 2px;"
-                        paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; {border_style} font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
+                        paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
                     else:
                         for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
                             if keyword in txt:
@@ -61,8 +87,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
             txt = html.escape(line.strip())
             if txt:
                 if txt.isupper() and len(txt) < 40:
-                    border_style = "" if "SUMMARY" in txt else "border-bottom: 1.5px solid #0f172a; padding-bottom: 2px;"
-                    paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; {border_style} font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
+                    paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
                 else:
                     for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
                         if keyword in txt:
@@ -90,7 +115,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     """
 
 def generate_paper_sheet_tailored_html(results):
-    """Renders the Tailored Resume web preview with black body text, blue 10pt headers, and bolded degrees/certs."""
+    """Renders Tailored Resume HTML preview with exact section lines and black body text."""
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
@@ -122,8 +147,15 @@ def generate_paper_sheet_tailored_html(results):
         role_title = html.escape(str(role.get("role_title", "")))
         exp_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{role_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
         for b in role.get("bullets", []):
-            clean_b = html.escape(str(b)).replace("**", "<strong>").replace("**", "</strong>")
-            exp_html += f'<li style="margin-bottom: 4px; color: #000000;">{clean_b}</li>'
+            spans = clean_markdown_bold_spans(b)
+            bullet_inner_html = ""
+            for text_part, is_bold in spans:
+                escaped_part = html.escape(text_part)
+                if is_bold:
+                    bullet_inner_html += f'<strong>{escaped_part}</strong>'
+                else:
+                    bullet_inner_html += escaped_part
+            exp_html += f'<li style="margin-bottom: 4px; color: #000000;">{bullet_inner_html}</li>'
         exp_html += '</ul>'
 
     proj_html = ""
@@ -131,33 +163,32 @@ def generate_paper_sheet_tailored_html(results):
         proj_title = html.escape(str(proj.get("project_title", "")))
         proj_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{proj_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
         for b in proj.get("bullets", []):
-            clean_b = html.escape(str(b)).replace("**", "<strong>").replace("**", "</strong>")
-            proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{clean_b}</li>'
+            spans = clean_markdown_bold_spans(b)
+            bullet_inner_html = ""
+            for text_part, is_bold in spans:
+                escaped_part = html.escape(text_part)
+                if is_bold:
+                    bullet_inner_html += f'<strong>{escaped_part}</strong>'
+                else:
+                    bullet_inner_html += escaped_part
+            proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{bullet_inner_html}</li>'
         proj_html += '</ul>'
 
-    # Bold Education Degree Names (9.5pt)
     edu_html = ""
     for e in edu_list:
         txt = html.escape(str(e))
         if "," in txt:
             parts = txt.split(",", 1)
             edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>,{parts[1]}</div>'
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>|{parts[1]}</div>'
         else:
             edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{txt}</strong></div>'
 
-    # Bold Certification Names (9.5pt)
     cert_html = ""
     for c in cert_list:
         txt = html.escape(str(c))
         if "," in txt:
             parts = txt.split(",", 1)
             cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>,{parts[1]}</div>'
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{parts[0]}</strong>|{parts[1]}</div>'
         else:
             cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{txt}</strong></div>'
 
@@ -186,17 +217,6 @@ def generate_paper_sheet_tailored_html(results):
                 text-align: center;
                 margin-top: 2px;
                 margin-bottom: 14px;
-                border-bottom: 1.5px solid #0f172a;
-                padding-bottom: 8px;
-            }}
-            .section-title-no-border {{
-                color: #1e3a8a;
-                font-size: 10pt;
-                margin-top: 12px;
-                margin-bottom: 6px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
             }}
             .section-title {{
                 color: #1e3a8a;
@@ -215,7 +235,7 @@ def generate_paper_sheet_tailored_html(results):
         <div class="header-name">{cand_name}</div>
         <div class="header-contact">{cand_details}</div>
 
-        <div class="section-title-no-border">Professional Summary</div>
+        <div class="section-title">Professional Summary</div>
         <p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{summary}</p>
 
         <div class="section-title">Technical Skills</div>
@@ -239,12 +259,8 @@ def generate_paper_sheet_tailored_html(results):
 
 def generate_new_formatted_docx(results):
     """
-    Generates a 1-Page A4 Word (.docx) document:
-    - Pure black body text
-    - Executive Blue 10pt section headers
-    - No line above Professional Summary
-    - Bolded degrees and certifications (9.5pt)
-    - Native Word list bullet dots (`List Bullet` style)
+    Generates a 1-Page A4 Word (.docx) document with isolated bold spans, 
+    blue 10pt section headers, and bottom border lines on ALL section titles.
     """
     output = BytesIO()
     doc = docx.Document()
@@ -280,40 +296,36 @@ def generate_new_formatted_docx(results):
     r_contact.font.name = "Arial"
     r_contact.font.size = Pt(8.5)
     r_contact.font.color.rgb = RGBColor(0, 0, 0)
-    add_bottom_border(p_contact, color_hex="0F172A", size="12")
 
-    def add_section_header(title_text, add_border=True):
+    def add_section_header(title_text):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(8)
         p.paragraph_format.space_after = Pt(4)
         r = p.add_run(title_text.upper())
         r.font.name = "Arial"
-        r.font.size = Pt(10) # Set font size to 10pt
+        r.font.size = Pt(10)
         r.font.bold = True
         r.font.color.rgb = RGBColor(30, 58, 138) # Executive Blue
-        if add_border:
-            add_bottom_border(p, color_hex="0F172A", size="8")
+        add_bottom_border(p, color_hex="0F172A", size="8")
         return p
 
-    # 2. PROFESSIONAL SUMMARY (No top/bottom border line above summary)
-    add_section_header("PROFESSIONAL SUMMARY", add_border=False)
+    # 2. PROFESSIONAL SUMMARY
+    add_section_header("PROFESSIONAL SUMMARY")
     p_sum = doc.add_paragraph()
     p_sum.paragraph_format.space_before = Pt(0)
     p_sum.paragraph_format.space_after = Pt(6)
     
     sum_text = sec2.get("professional_summary", "")
-    sum_parts = sum_text.split("**")
-    for idx, part in enumerate(sum_parts):
-        if not part:
-            continue
+    sum_spans = clean_markdown_bold_spans(sum_text)
+    for part, is_bold in sum_spans:
         r_sum = p_sum.add_run(part)
         r_sum.font.name = "Arial"
         r_sum.font.size = Pt(9)
-        r_sum.font.bold = (idx % 2 == 1)
-        r_sum.font.color.rgb = RGBColor(0, 0, 0) # Black text
+        r_sum.font.bold = is_bold
+        r_sum.font.color.rgb = RGBColor(0, 0, 0)
 
     # 3. TECHNICAL SKILLS
-    add_section_header("TECHNICAL SKILLS", add_border=True)
+    add_section_header("TECHNICAL SKILLS")
     grouped_skills = sec2.get("core_competencies_grouped", {})
     for cat, val in grouped_skills.items():
         p_sk = doc.add_paragraph()
@@ -329,10 +341,11 @@ def generate_new_formatted_docx(results):
         r_val = p_sk.add_run(str(val))
         r_val.font.name = "Arial"
         r_val.font.size = Pt(9)
+        r_val.font.bold = False
         r_val.font.color.rgb = RGBColor(0, 0, 0)
 
     # 4. WORK EXPERIENCE
-    add_section_header("WORK EXPERIENCE", add_border=True)
+    add_section_header("WORK EXPERIENCE")
     for role in sec2.get("professional_experience", []):
         p_role = doc.add_paragraph()
         p_role.paragraph_format.space_before = Pt(4)
@@ -345,24 +358,20 @@ def generate_new_formatted_docx(results):
         r_role.font.color.rgb = RGBColor(0, 0, 0)
 
         for b in role.get("bullets", []):
-            # Native Word Bullet List Style for Visible Bullet Dots
             p_b = doc.add_paragraph(style='List Bullet')
             p_b.paragraph_format.space_before = Pt(0)
             p_b.paragraph_format.space_after = Pt(2)
             
-            clean_bullet = b.strip()
-            parts = clean_bullet.split("**")
-            for idx, part in enumerate(parts):
-                if not part:
-                    continue
+            b_spans = clean_markdown_bold_spans(b.strip())
+            for part, is_bold in b_spans:
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
                 r_b.font.size = Pt(8.8)
-                r_b.font.bold = (idx % 2 == 1)
+                r_b.font.bold = is_bold # Explicitly set bold per span
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
     # 5. PROJECTS
-    add_section_header("PROJECTS", add_border=True)
+    add_section_header("PROJECTS")
     for proj in sec2.get("projects", []):
         p_proj = doc.add_paragraph()
         p_proj.paragraph_format.space_before = Pt(4)
@@ -379,18 +388,16 @@ def generate_new_formatted_docx(results):
             p_b.paragraph_format.space_before = Pt(0)
             p_b.paragraph_format.space_after = Pt(2)
             
-            parts = b.strip().split("**")
-            for idx, part in enumerate(parts):
-                if not part:
-                    continue
+            p_spans = clean_markdown_bold_spans(b.strip())
+            for part, is_bold in p_spans:
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
                 r_b.font.size = Pt(8.8)
-                r_b.font.bold = (idx % 2 == 1)
+                r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 6. EDUCATION (Bold Degree Name at 9.5pt)
-    add_section_header("EDUCATION", add_border=True)
+    # 6. EDUCATION
+    add_section_header("EDUCATION")
     for edu in sec2.get("education", []):
         p_edu = doc.add_paragraph()
         p_edu.paragraph_format.space_before = Pt(0)
@@ -408,6 +415,7 @@ def generate_new_formatted_docx(results):
             r_rest = p_edu.add_run(f",{parts[1]}")
             r_rest.font.name = "Arial"
             r_rest.font.size = Pt(8.8)
+            r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_deg = p_edu.add_run(txt)
@@ -416,8 +424,8 @@ def generate_new_formatted_docx(results):
             r_deg.font.bold = True
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
 
-    # 7. CERTIFICATIONS (Bold Certificate Name at 9.5pt)
-    add_section_header("CERTIFICATIONS", add_border=True)
+    # 7. CERTIFICATIONS
+    add_section_header("CERTIFICATIONS")
     for cert in sec2.get("certifications", []):
         p_cert = doc.add_paragraph()
         p_cert.paragraph_format.space_before = Pt(0)
@@ -435,6 +443,7 @@ def generate_new_formatted_docx(results):
             r_rest = p_cert.add_run(f",{parts[1]}")
             r_rest.font.name = "Arial"
             r_rest.font.size = Pt(8.8)
+            r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_cert = p_cert.add_run(txt)
