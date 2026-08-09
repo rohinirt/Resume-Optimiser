@@ -64,35 +64,31 @@ def clean_markdown_bold_spans(text):
     return spans
 
 def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
-    """Renders Original Master Resume with uniform blue 10pt section borders and black body text."""
+    """Renders Original Master Resume with the EXACT same CSS typography and blue 10pt section borders."""
     paragraphs_html = ""
+    
+    # Extract lines from docx or raw text string
     if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
         try:
             doc = docx.Document(BytesIO(content_text_or_bytes))
-            for p in doc.paragraphs:
-                txt = html.escape(p.text.strip())
-                if txt:
-                    if txt.isupper() and len(txt) < 40:
-                        paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
-                    else:
-                        for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
-                            if keyword in txt:
-                                txt = txt.replace(keyword, f'<strong>{keyword}</strong>')
-                        paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.45; color: #000000; margin-bottom: 6px; font-family: Arial, sans-serif;">{txt}</p>'
+            lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         except Exception:
-            paragraphs_html = f'<p style="font-size:0.88rem; color: #000000; font-family: Arial, sans-serif;">{html.escape(str(content_text_or_bytes))}</p>'
+            lines = []
     else:
-        lines = str(content_text_or_bytes).split('\n')
-        for line in lines:
-            txt = html.escape(line.strip())
-            if txt:
-                if txt.isupper() and len(txt) < 40:
-                    paragraphs_html += f'<div style="color: #1e3a8a; font-size: 10pt; margin-top: 14px; margin-bottom: 6px; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; font-weight: 700; text-transform: uppercase; font-family: Arial, sans-serif;">{txt}</div>'
-                else:
-                    for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
-                        if keyword in txt:
-                            txt = txt.replace(keyword, f'<strong>{keyword}</strong>')
-                    paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.45; color: #000000; margin-bottom: 6px; font-family: Arial, sans-serif;">{txt}</p>'
+        lines = [line.strip() for line in str(content_text_or_bytes).split('\n') if line.strip()]
+
+    # Apply exact same CSS styling as Tailored Preview Sheet
+    for txt in lines:
+        escaped_txt = html.escape(txt)
+        # Check if line is a section header (All Uppercase and under 40 chars)
+        if txt.isupper() and len(txt) < 40:
+            paragraphs_html += f'<div class="section-title">{escaped_txt}</div>'
+        else:
+            # Safely bold key roles/tools in body text
+            for keyword in ["Uber", "TopN Analytics", "Data Analytics Specialist", "Data Analyst Intern", "SQL", "Python", "Tableau", "Looker Studio"]:
+                if keyword in escaped_txt:
+                    escaped_txt = escaped_txt.replace(keyword, f'<strong>{keyword}</strong>')
+            paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 6px;">{escaped_txt}</p>'
 
     return f"""
     <!DOCTYPE html>
@@ -105,6 +101,17 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
                 color: #000000;
                 margin: 0;
                 padding: 25px;
+            }}
+            .section-title {{
+                color: #1e3a8a;
+                font-size: 10pt;
+                margin-top: 14px;
+                margin-bottom: 6px;
+                border-bottom: 1.5px solid #0f172a;
+                padding-bottom: 2px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
         </style>
     </head>
