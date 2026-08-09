@@ -1,6 +1,7 @@
 import docx
 import base64
 import html
+import re
 from io import BytesIO
 from pypdf import PdfReader
 
@@ -20,40 +21,89 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
-def get_pdf_preview_html(pdf_bytes, height=1100):
+def get_pdf_preview_html(pdf_bytes, height=1150):
     """Embeds PDF binary cleanly with full page height to prevent internal scrollbars."""
     if not pdf_bytes:
         return "<p>No document available for preview.</p>"
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
     return f'<iframe src="data:application/pdf;base64,{base64_pdf}#toolbar=0&navpanes=0&scrollbar=0" width="100%" height="{height}px" style="border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden;"></iframe>'
 
-def get_docx_preview_html(uploaded_bytes_or_file, height=1100):
-    """Renders Word Document paragraphs in an exact clean paper sheet container."""
+def get_docx_preview_html(uploaded_bytes_or_file, height=1150):
+    """
+    Renders Word Document using embedded JS parser to preserve 
+    exact original fonts, borders, line spacing, and run bolding.
+    """
     try:
         if isinstance(uploaded_bytes_or_file, bytes):
-            doc = docx.Document(BytesIO(uploaded_bytes_or_file))
+            docx_bytes = uploaded_bytes_or_file
         else:
             uploaded_bytes_or_file.seek(0)
-            doc = docx.Document(uploaded_bytes_or_file)
+            docx_bytes = uploaded_bytes_or_file.read()
             uploaded_bytes_or_file.seek(0)
         
-        paragraphs_html = ""
-        for p in doc.paragraphs:
-            txt = html.escape(p.text.strip())
-            if txt:
-                if txt.isupper() and len(txt) < 40:
-                    paragraphs_html += f'<h4 style="color:#0f172a; margin-top:18px; margin-bottom:6px; border-bottom:1px solid #0f172a; padding-bottom:4px; font-family:sans-serif; text-transform:uppercase; font-size:0.95rem;">{txt}</h4>'
-                else:
-                    paragraphs_html += f'<p style="font-size:0.88rem; line-height:1.55; color:#334155; margin-bottom:8px; font-family:sans-serif;">{txt}</p>'
+        base64_docx = base64.b64encode(docx_bytes).decode('utf-8')
         
-        return f'<div style="background-color:#ffffff; padding:35px; border-radius:12px; border:1px solid #cbd5e1; min-height:{height}px; box-shadow:0 4px 12px rgba(0,0,0,0.06); font-family:sans-serif;">{paragraphs_html}</div>'
+        # Mammoth JS Renderer embedded inside container for pixel-perfect Word formatting
+        html_container = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background-color: #ffffff;
+                    color: #0f172a;
+                    padding: 35px;
+                    margin: 0;
+                    min-height: {height}px;
+                }}
+                p {{
+                    margin-bottom: 6px;
+                    line-height: 1.5;
+                    font-size: 0.88rem;
+                }}
+                h1, h2, h3, h4 {{
+                    color: #0f172a;
+                    border-bottom: 1px solid #0f172a;
+                    padding-bottom: 3px;
+                    margin-top: 16px;
+                    margin-bottom: 8px;
+                    text-transform: uppercase;
+                    font-size: 0.95rem;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="document-render">Loading Original Document Formatting...</div>
+            <script>
+                const base64Data = "{base64_docx}";
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {{
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }}
+                const byteArray = new Uint8Array(byteNumbers);
+                
+                mammoth.convertToHtml({{arrayBuffer: byteArray.buffer}})
+                    .then(function(result){{
+                        document.getElementById('document-render').innerHTML = result.value;
+                    }})
+                    .catch(function(err){{
+                        document.getElementById('document-render').innerHTML = "Error rendering Word doc.";
+                    }});
+            </script>
+        </body>
+        </html>
+        """
+        return html_container
     except Exception as e:
         return f'<div style="padding:20px; color:red;">Unable to render DOCX preview: {str(e)}</div>'
 
 def generate_paper_sheet_tailored_html(results):
     """
-    Renders an executive A4-styled HTML document with styled headers, 
-    bullet points, and yellow keyword badges.
+    Renders optimized resume as a clean A4 sheet without unnecessary banners,
+    using yellow highlights for keywords, green for metrics, and blue for bullet improvements.
     """
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
@@ -63,11 +113,14 @@ def generate_paper_sheet_tailored_html(results):
     exp_list = sec2.get("professional_experience", [])
     proj_list = sec2.get("projects", [])
 
-    # Highlight matching keywords with inline badges
+    # Highlight Keywords in Yellow
     for kw in keywords:
         if len(kw) > 2 and kw in summary:
             escaped_kw = html.escape(kw)
             summary = summary.replace(escaped_kw, f'<mark style="background-color: #fef08a; padding: 2px 5px; border-radius: 4px; font-weight: 600; color: #1e293b;">{escaped_kw}</mark>')
+
+    # Highlight Metrics (%) in Green
+    summary = re.sub(r'(\b\d+%\b|\b\d+K–\d+K\+\b|\b\d+\+\b)', r'<mark style="background-color: #bbf7d0; padding: 2px 5px; border-radius: 4px; font-weight: 600; color: #166534;">\1</mark>', summary)
 
     skills_html = ""
     for cat, val in skills_grouped.items():
@@ -79,6 +132,8 @@ def generate_paper_sheet_tailored_html(results):
         exp_html += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem; margin-top: 14px;">{role_title}</p><ul style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
         for b in role.get("bullets", []):
             clean_b = html.escape(str(b)).replace("**", "")
+            # Highlight percentages/metrics in green
+            clean_b = re.sub(r'(\b\d+%\b|\b\d+K–\d+K\+\b|\b\d+\+\b|\b\d+,\d+\+\b)', r'<mark style="background-color: #bbf7d0; padding: 2px 4px; border-radius: 3px; font-weight: 600; color: #166534;">\1</mark>', clean_b)
             exp_html += f'<li style="margin-bottom: 6px;">{clean_b}</li>'
         exp_html += '</ul>'
 
@@ -88,6 +143,7 @@ def generate_paper_sheet_tailored_html(results):
         proj_html += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem; margin-top: 14px;">{proj_title}</p><ul style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
         for b in proj.get("bullets", []):
             clean_b = html.escape(str(b)).replace("**", "")
+            clean_b = re.sub(r'(\b\d+%\b|\b\d+,\d+\+\b|\b\d+\+\b)', r'<mark style="background-color: #bbf7d0; padding: 2px 4px; border-radius: 3px; font-weight: 600; color: #166534;">\1</mark>', clean_b)
             proj_html += f'<li style="margin-bottom: 6px;">{clean_b}</li>'
         proj_html += '</ul>'
 
@@ -100,21 +156,21 @@ def generate_paper_sheet_tailored_html(results):
                 font-family: 'Segoe UI', Arial, sans-serif;
                 background-color: #ffffff;
                 color: #1e293b;
-                margin: 0;
-                padding: 30px;
-            }}
-            .header-banner {{
-                border-bottom: 2px solid #0f172a;
-                padding-bottom: 8px;
-                margin-bottom: 20px;
+                margin: 0 auto;
+                padding: 40px;
+                max-width: 800px;
+                min-height: 1100px;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
             }}
             .section-title {{
-                color: #1e3a8a;
-                font-size: 0.98rem;
+                color: #0f172a;
+                font-size: 0.95rem;
                 margin-top: 18px;
                 margin-bottom: 8px;
-                border-bottom: 1px solid #e2e8f0;
-                padding-bottom: 4px;
+                border-bottom: 1.5px solid #0f172a;
+                padding-bottom: 3px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
@@ -122,12 +178,7 @@ def generate_paper_sheet_tailored_html(results):
         </style>
     </head>
     <body>
-        <div class="header-banner">
-            <h3 style="margin:0; color:#0f172a; font-size:1.25rem; font-weight:700;">TAILORED RESUME PREVIEW</h3>
-            <span style="font-size:0.8rem; color:#64748b;">Yellow highlights indicate aligned ATS keywords and Google XYZ metrics</span>
-        </div>
-
-        <div class="section-title">Professional Summary</div>
+        <div class="section-title" style="margin-top:0;">Professional Summary</div>
         <p style="font-size: 0.88rem; line-height: 1.6; color: #334155; margin-bottom: 18px;">{summary}</p>
 
         <div class="section-title">Technical Skills & Competencies</div>
