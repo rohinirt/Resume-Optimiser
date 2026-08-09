@@ -61,7 +61,16 @@ Return ONLY a valid JSON object following this exact structure:
       "Strategic positioning point 2..."
     ]
   },
+  "summary_of_changes": [
+    "Added missing JD technical keywords: A/B Testing, SLA Monitoring, and Data Governance across skills and experience sections.",
+    "Restructured experience bullets using Google XYZ formula to emphasize high-volume data pipeline metrics.",
+    "Preserved candidate contact info, education, and certifications while optimizing content density for 1 A4 page."
+  ],
   "section_2_tailored_content": {
+    "contact_info": {
+      "name": "ROHINI TEMBHURNIKAR",
+      "details": "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | Hyderabad | LinkedIn | GitHub | Portfolio | Tableau"
+    },
     "professional_summary": "Tailored, high-impact 2-3 sentence summary aligned with JD keywords...",
     "core_competencies_grouped": {
       "Programming & Databases": "SQL, BigQuery, Python (Pandas, NumPy)",
@@ -71,7 +80,7 @@ Return ONLY a valid JSON object following this exact structure:
     },
     "professional_experience": [
       {
-        "role_title": "Data Analytics Specialist, Uber",
+        "role_title": "Data Analytics Specialist, Uber | Hyderabad, Jan 2026 – Aug 2026",
         "bullets": [
           "Engineered automated ETL data pipelines using Google Sheets, Python, SQL, and BigQuery processing 80K–90K+ records daily/weekly, reducing performance tracking cycle times by 40%.",
           "Deployed interactive Looker Studio dashboards integrated with Row-Level Security for Identity Operations enabling 200+ global users to self-serve insights."
@@ -85,6 +94,14 @@ Return ONLY a valid JSON object following this exact structure:
           "Yielded a 28% average revenue increase per product by developing a Random Forest model in Python to forecast demand and calculate price elasticity."
         ]
       }
+    ],
+    "education": [
+      "Master of Computer Application, SNDT University Mumbai (80%) | May 2025",
+      "Bachelor Of Science, Nagpur University (75%) | June 2023"
+    ],
+    "certifications": [
+      "Google Data Analytics Professional Certificate, Coursera | July 2023",
+      "SQL: Data Reporting and Analysis, LinkedIn Learning | Oct 2022"
     ]
   },
   "suggested_filename": "Candidate_Data_Analyst_TargetCompany",
