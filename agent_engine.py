@@ -8,6 +8,7 @@ from google.genai import types, errors
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
+# EXACT ORIGINAL SYSTEM INSTRUCTIONS (UNTOUCHED)
 SYSTEM_INSTRUCTION = """
 You are a Principal Data Analytics Hiring Manager and Elite ATS Optimization Specialist.
 
@@ -123,3 +124,32 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
             raise e
 
     raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
+
+def fetch_real_web_salary(company_name, job_title):
+    """
+    Uses Gemini API with Google Search Grounding to find real public salary information
+    with verified source links.
+    """
+    if not company_name or not job_title or company_name.lower() == "targetcompany":
+        return "No public salary data available for this role."
+
+    prompt = f"""
+    Search the public web for real salary data for the role of '{job_title}' at '{company_name}'.
+    Check sites like Glassdoor, AmbitionBox, Indeed, or LinkedIn.
+    
+    If verified salary data is found, output a 1-sentence response with the exact compensation range in local currency and provide the markdown link source URL [Source Title](URL).
+    If no public verified data is found, output strictly: "No public salary data available for this role."
+    """
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.1
+            )
+        )
+        return response.text.strip()
+    except Exception:
+        return "No public salary data available for this role."
