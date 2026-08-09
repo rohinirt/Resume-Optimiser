@@ -2,8 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from utils import (
     extract_text_from_file, 
-    get_pdf_preview_html, 
-    get_docx_preview_html, 
+    generate_standard_resume_sheet_html,
     generate_paper_sheet_tailored_html,
     build_updated_docx_inplace
 )
@@ -18,9 +17,6 @@ st.set_page_config(
 
 if 'page' not in st.session_state:
     st.session_state['page'] = 'landing'
-
-def go_to_results():
-    st.session_state['page'] = 'results'
 
 def go_to_landing():
     st.session_state['page'] = 'landing'
@@ -115,6 +111,18 @@ st.markdown("""
         margin: 2px;
     }
 
+    /* BLUE DOWNLOAD BUTTON STYLING */
+    div.stDownloadButton > button {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+    }
+
     div.stButton > button {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
         color: #ffffff !important;
@@ -123,13 +131,6 @@ st.markdown("""
         padding: 14px 28px !important;
         font-weight: 700 !important;
         font-size: 1.05rem !important;
-        box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.3) !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    div.stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px 0 rgba(37, 99, 235, 0.45) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -257,77 +258,64 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SIDE BY SIDE RESUME VIEWERS WITH TOP DOWNLOAD BUTTON
+    # SIDE BY SIDE RESUME VIEWERS (WITH TOP RIGHT BLUE DOWNLOAD BUTTON)
     st.markdown("### 📄 Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
-    selections = {
-        "apply_summary": True,
-        "apply_skills": True,
-        "apply_exp": True,
-        "apply_projects": True
-    }
-
-    updated_docx = build_updated_docx_inplace(
-        st.session_state.get('resume_bytes', b""),
-        st.session_state.get('file_type', 'pdf'),
-        res,
-        selections
-    )
-    filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
-
     with view_left:
-        st.markdown("##### 👁️ Original Master Resume (Exact Formatting)")
+        st.markdown("##### 👁️ Original Master Resume")
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
         
-        if file_type == 'pdf':
-            pdf_html = get_pdf_preview_html(resume_bytes, height=1150)
-            st.markdown(pdf_html, unsafe_allow_html=True)
+        # Build Standardized A4 HTML Template for Original Resume
+        if file_type == 'docx':
+            orig_html = generate_standard_resume_sheet_html("Original Resume", resume_bytes, is_docx_file=True)
         else:
-            docx_html = get_docx_preview_html(resume_bytes, height=1150)
-            components.html(docx_html, height=1150, scrolling=True)
+            orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
+            orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
+            
+        components.html(orig_html, height=1050, scrolling=True)
 
     with view_right:
-        # TOP BLUE DOWNLOAD BUTTON LOCATED AT THE RIGHT TOP OF TAILORED RESUME SHEET
-        btn_c1, btn_c2 = st.columns([1.2, 2])
-        with btn_c1:
-            st.markdown("##### ✨ Tailored Resume Sheet")
-        with btn_c2:
+        # TOP-RIGHT DOWNLOAD BUTTON & HEADER
+        hdr_col1, hdr_col2 = st.columns([1.5, 1])
+        with hdr_col1:
+            st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
+        with hdr_col2:
+            selections = {"apply_summary": True, "apply_skills": True, "apply_exp": True, "apply_projects": True}
+            updated_docx = build_updated_docx_inplace(
+                st.session_state.get('resume_bytes', b""),
+                st.session_state.get('file_type', 'pdf'),
+                res,
+                selections
+            )
+            filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
             st.download_button(
-                label="📥 Download Optimised Resume (.docx)",
+                label="📥 Download Optimized Resume (.docx)",
                 data=updated_docx,
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                type="primary",
+                key="download_top_right",
                 use_container_width=True
             )
-            
+
+        # OPTIMIZED RESUME SHEET
         paper_html = generate_paper_sheet_tailored_html(res)
-        components.html(paper_html, height=1150, scrolling=True)
+        components.html(paper_html, height=1050, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # NEW REPLACED BOTTOM SECTION: SUMMARY OF CHANGES & OPTIMIZATIONS MADE
-    st.markdown("### 📋 Summary of Changes & Optimizations Made")
-    st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">', unsafe_allow_html=True)
-
-    st.markdown("##### 1. Professional Summary Rewritten")
-    st.info(sec2.get("professional_summary", ""))
-
-    st.markdown("##### 2. Keywords Added & Categorized")
-    added_kws = post.get("matching_keywords", [])
-    st.markdown("".join([f'<span class="tag-green">{k}</span>' for k in added_kws]), unsafe_allow_html=True)
-
-    st.markdown("<br>##### 3. Google XYZ Rewritten Bullet Points & Quantified Impact", unsafe_allow_html=True)
-    for role in sec2.get("professional_experience", []):
-        st.caption(f"**{role.get('role_title')}**")
-        for b in role.get("bullets", []):
-            st.write(f"- {b}")
-
-    for proj in sec2.get("projects", []):
-        st.caption(f"**{proj.get('project_title')}**")
-        for b in proj.get("bullets", []):
-            st.write(f"- {b}")
+    # REPLACED SECTION EDITOR WITH SUMMARY OF CHANGES MADE
+    st.markdown("### 📋 Summary of Key Resume Enhancements")
+    st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+    
+    changes = res.get("summary_of_changes", [
+        "Aligned technical skills and competency categories directly with job requirements.",
+        "Rewrote experience bullet points into action-oriented metric statements using the Google XYZ formula.",
+        "Optimized content density to maintain strict 1 A4 page constraints."
+    ])
+    
+    for idx, change in enumerate(changes, 1):
+        st.markdown(f"**{idx}.** {change}")
 
     st.markdown('</div>', unsafe_allow_html=True)
