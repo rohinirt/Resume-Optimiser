@@ -277,7 +277,7 @@ elif st.session_state['page'] == 'results':
     with view_right:
         hdr_col1, hdr_col2 = st.columns([1.5, 1])
         with hdr_col1:
-            st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
+            st.markdown("##### ✨ Tailored Resume")
         with hdr_col2:
             updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
