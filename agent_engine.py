@@ -36,6 +36,10 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 5. ZERO HALLUCINATION CONSTRAINT:
    - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
 
+6. STRICT ONE-PAGE (A4) CONSTRAINT:
+   - The rewritten resume MUST fit on exactly ONE A4 page. 
+   - Keep bullet points concise, impactful, and non-redundant. Prioritize high-impact achievements.
+   
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
 {
