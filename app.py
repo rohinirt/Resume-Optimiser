@@ -257,59 +257,15 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SIDE BY SIDE RESUME VIEWERS (FIXED HTML RENDERER)
+    # SIDE BY SIDE RESUME VIEWERS WITH TOP DOWNLOAD BUTTON
     st.markdown("### 📄 Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
-    with view_left:
-        st.markdown("##### 👁️ Original Master Resume")
-        file_type = st.session_state.get('file_type', 'pdf')
-        resume_bytes = st.session_state.get('resume_bytes', b"")
-        
-        if file_type == 'pdf':
-            pdf_html = get_pdf_preview_html(resume_bytes, height=1100)
-            st.markdown(pdf_html, unsafe_allow_html=True)
-        else:
-            docx_html = get_docx_preview_html(resume_bytes, height=1100)
-            st.markdown(docx_html, unsafe_allow_html=True)
-
-    with view_right:
-        st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
-        paper_html = generate_paper_sheet_tailored_html(res)
-        # NATIVE STREAMLIT COMPONENT RENDERER (PREVENTS RAW CODE PRINTING)
-        components.html(paper_html, height=1100, scrolling=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # SECTION EDITOR & EXPORT TOOLBAR
-    st.markdown("### 🛠️ Section Editor & Export Content")
-    st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
-
-    apply_summary = st.checkbox("Apply Professional Summary", value=True)
-    st.info(sec2.get("professional_summary", ""))
-
-    apply_skills = st.checkbox("Apply Categorized Skills", value=True)
-    skills_grouped = sec2.get("core_competencies_grouped", {})
-    for category, skills in skills_grouped.items():
-        st.write(f"**{category}:** {skills}")
-
-    apply_exp = st.checkbox("Apply Work Experience Bullets", value=True)
-    for role in sec2.get("professional_experience", []):
-        st.caption(f"**{role.get('role_title')}**")
-        for b in role.get("bullets", []):
-            st.write(f"- {b}")
-
-    apply_projects = st.checkbox("Apply Projects Bullets", value=True)
-    for proj in sec2.get("projects", []):
-        st.caption(f"**{proj.get('project_title')}**")
-        for b in proj.get("bullets", []):
-            st.write(f"- {b}")
-
     selections = {
-        "apply_summary": apply_summary,
-        "apply_skills": apply_skills,
-        "apply_exp": apply_exp,
-        "apply_projects": apply_projects
+        "apply_summary": True,
+        "apply_skills": True,
+        "apply_exp": True,
+        "apply_projects": True
     }
 
     updated_docx = build_updated_docx_inplace(
@@ -318,16 +274,60 @@ elif st.session_state['page'] == 'results':
         res,
         selections
     )
-
     filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
 
+    with view_left:
+        st.markdown("##### 👁️ Original Master Resume (Exact Formatting)")
+        file_type = st.session_state.get('file_type', 'pdf')
+        resume_bytes = st.session_state.get('resume_bytes', b"")
+        
+        if file_type == 'pdf':
+            pdf_html = get_pdf_preview_html(resume_bytes, height=1150)
+            st.markdown(pdf_html, unsafe_allow_html=True)
+        else:
+            docx_html = get_docx_preview_html(resume_bytes, height=1150)
+            components.html(docx_html, height=1150, scrolling=True)
+
+    with view_right:
+        # TOP BLUE DOWNLOAD BUTTON LOCATED AT THE RIGHT TOP OF TAILORED RESUME SHEET
+        btn_c1, btn_c2 = st.columns([1.2, 2])
+        with btn_c1:
+            st.markdown("##### ✨ Tailored Resume Sheet")
+        with btn_c2:
+            st.download_button(
+                label="📥 Download Optimised Resume (.docx)",
+                data=updated_docx,
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary",
+                use_container_width=True
+            )
+            
+        paper_html = generate_paper_sheet_tailored_html(res)
+        components.html(paper_html, height=1150, scrolling=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
-    st.download_button(
-        label="📥 Download Tailored Resume (.docx)",
-        data=updated_docx,
-        file_name=filename,
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        type="primary",
-        use_container_width=True
-    )
+
+    # NEW REPLACED BOTTOM SECTION: SUMMARY OF CHANGES & OPTIMIZATIONS MADE
+    st.markdown("### 📋 Summary of Changes & Optimizations Made")
+    st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">', unsafe_allow_html=True)
+
+    st.markdown("##### 1. Professional Summary Rewritten")
+    st.info(sec2.get("professional_summary", ""))
+
+    st.markdown("##### 2. Keywords Added & Categorized")
+    added_kws = post.get("matching_keywords", [])
+    st.markdown("".join([f'<span class="tag-green">{k}</span>' for k in added_kws]), unsafe_allow_html=True)
+
+    st.markdown("<br>##### 3. Google XYZ Rewritten Bullet Points & Quantified Impact", unsafe_allow_html=True)
+    for role in sec2.get("professional_experience", []):
+        st.caption(f"**{role.get('role_title')}**")
+        for b in role.get("bullets", []):
+            st.write(f"- {b}")
+
+    for proj in sec2.get("projects", []):
+        st.caption(f"**{proj.get('project_title')}**")
+        for b in proj.get("bullets", []):
+            st.write(f"- {b}")
+
     st.markdown('</div>', unsafe_allow_html=True)
