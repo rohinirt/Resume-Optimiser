@@ -20,12 +20,12 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
-def generate_standard_resume_sheet_html(title_header, content_text_or_lines, is_docx_file=False):
+def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
     """Renders the Original Master Resume in the EXACT same executive A4 template as the optimized preview."""
     paragraphs_html = ""
-    if is_docx_file and isinstance(content_text_or_lines, bytes):
+    if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
         try:
-            doc = docx.Document(BytesIO(content_text_or_lines))
+            doc = docx.Document(BytesIO(content_text_or_bytes))
             for p in doc.paragraphs:
                 txt = html.escape(p.text.strip())
                 if txt:
@@ -34,9 +34,9 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_lines, is_
                     else:
                         paragraphs_html += f'<p style="font-size: 0.88rem; line-height: 1.55; color: #334155; margin-bottom: 8px; font-family: Segoe UI, sans-serif;">{txt}</p>'
         except Exception:
-            paragraphs_html = f'<p style="font-size:0.88rem;">{html.escape(str(content_text_or_lines))}</p>'
+            paragraphs_html = f'<p style="font-size:0.88rem;">{html.escape(str(content_text_or_bytes))}</p>'
     else:
-        lines = str(content_text_or_lines).split('\n')
+        lines = str(content_text_or_bytes).split('\n')
         for line in lines:
             txt = html.escape(line.strip())
             if txt:
@@ -97,7 +97,6 @@ def generate_paper_sheet_tailored_html(results):
         exp_html += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem; margin-top: 14px;">{role_title}</p><ul style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
         for b in role.get("bullets", []):
             clean_b = html.escape(str(b)).replace("**", "")
-            # Highlight added/rephrased metrics in bullets
             for kw in keywords:
                 if len(kw) > 3 and kw in clean_b:
                     escaped_kw = html.escape(kw)
