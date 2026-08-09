@@ -1,5 +1,6 @@
 import docx
 import base64
+import html
 from io import BytesIO
 from pypdf import PdfReader
 
@@ -19,85 +20,97 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
-def get_pdf_preview_html(pdf_bytes, height=850):
-    """Generates an embedded iframe for full original PDF viewing."""
+def get_pdf_preview_html(pdf_bytes, height=800):
+    """Generates an embedded iframe for full original PDF document viewing."""
+    if not pdf_bytes:
+        return "<p>No document bytes available for preview.</p>"
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}" style="border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"></iframe>'
+    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}px" style="border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></iframe>'
 
-def get_docx_preview_text(uploaded_file_or_bytes):
-    """Reads docx paragraphs into clean formatted text for display."""
-    if isinstance(uploaded_file_or_bytes, bytes):
-        if not uploaded_file_or_bytes:
-            return ""
-        doc = docx.Document(BytesIO(uploaded_file_or_bytes))
-    else:
-        uploaded_file_or_bytes.seek(0)
-        doc = docx.Document(uploaded_file_or_bytes)
-        uploaded_file_or_bytes.seek(0)
-    lines = [p.text for p in doc.paragraphs if p.text.strip()]
-    return "\n\n".join(lines)
+def get_docx_preview_html(uploaded_bytes_or_file, height=800):
+    """Renders Word Document paragraphs into clean structured HTML."""
+    try:
+        if isinstance(uploaded_bytes_or_file, bytes):
+            doc = docx.Document(BytesIO(uploaded_bytes_or_file))
+        else:
+            uploaded_bytes_or_file.seek(0)
+            doc = docx.Document(uploaded_bytes_or_file)
+            uploaded_bytes_or_file.seek(0)
+        
+        paragraphs_html = ""
+        for p in doc.paragraphs:
+            txt = html.escape(p.text.strip())
+            if txt:
+                # Basic header detection for visual formatting
+                if txt.isupper() and len(txt) < 40:
+                    paragraphs_html += f'<h4 style="color:#0f172a; margin-top:16px; margin-bottom:6px; border-bottom:1px solid #cbd5e1; padding-bottom:4px; font-family:sans-serif;">{txt}</h4>'
+                else:
+                    paragraphs_html += f'<p style="font-size:0.88rem; line-height:1.5; color:#334155; margin-bottom:8px; font-family:sans-serif;">{txt}</p>'
+        
+        return f'<div style="background-color:#ffffff; padding:25px; border-radius:8px; border:1px solid #cbd5e1; height:{height}px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.05);">{paragraphs_html}</div>'
+    except Exception as e:
+        return f'<div style="padding:20px; color:red;">Unable to render DOCX preview: {str(e)}</div>'
 
 def generate_paper_sheet_tailored_html(results):
     """
-    Renders an optimized resume as a realistic A4 white paper sheet document 
-    with highlighted keywords and formatted bullet points.
+    Renders the optimized resume as an HTML document with yellow highlights 
+    on matching keywords and bold metrics.
     """
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
-    summary = sec2.get("professional_summary", "")
+    summary = html.escape(sec2.get("professional_summary", ""))
     skills_grouped = sec2.get("core_competencies_grouped", {})
     exp_list = sec2.get("professional_experience", [])
     proj_list = sec2.get("projects", [])
 
-    # Apply inline yellow highlights to keywords
+    # Highlight keywords with yellow inline badges
     for kw in keywords:
         if len(kw) > 2 and kw in summary:
-            summary = summary.replace(kw, f'<mark style="background-color: #fef08a; padding: 2px 4px; border-radius: 3px; font-weight: 600; color: #1e293b;">{kw}</mark>')
+            escaped_kw = html.escape(kw)
+            summary = summary.replace(escaped_kw, f'<mark style="background-color: #fef08a; padding: 2px 4px; border-radius: 3px; font-weight: 600; color: #1e293b;">{escaped_kw}</mark>')
 
-    html_out = f"""
-    <div style="background-color: #ffffff; padding: 40px; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); font-family: 'Times New Roman', Times, serif, sans-serif; color: #1e293b; max-height: 850px; overflow-y: auto;">
+    html_out = """
+    <div style="background-color: #ffffff; padding: 35px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 8px 20px rgba(0,0,0,0.06); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; max-height: 800px; overflow-y: auto;">
         
-        <!-- HEADER / TITLE -->
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; color: #0f172a; font-family: sans-serif; font-weight: 700;">OPTIMIZED RESUME PREVIEW</h2>
-            <span style="font-size: 0.8rem; color: #64748b; font-family: sans-serif;">Yellow highlights indicate aligned ATS keywords & optimized bullet metrics</span>
+            <h3 style="margin: 0; font-size: 1.3rem; letter-spacing: 0.5px; color: #0f172a; font-weight: 700;">OPTIMIZED TAILORED RESUME</h3>
+            <span style="font-size: 0.8rem; color: #64748b;">Yellow highlights indicate matched ATS keywords and Google XYZ bullet metrics</span>
         </div>
 
-        <!-- PROFESSIONAL SUMMARY -->
-        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">PROFESSIONAL SUMMARY</h3>
-        <p style="font-size: 0.9rem; line-height: 1.6; color: #334155; margin-bottom: 20px;">{summary}</p>
+        <h4 style="color: #1e3a8a; font-size: 1rem; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; font-weight:700;">PROFESSIONAL SUMMARY</h4>
+        <p style="font-size: 0.88rem; line-height: 1.6; color: #334155; margin-bottom: 20px;">""" + summary + """</p>
         
-        <!-- CORE COMPETENCIES -->
-        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">TECHNICAL SKILLS & COMPETENCIES</h3>
+        <h4 style="color: #1e3a8a; font-size: 1rem; margin-top: 15px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; font-weight:700;">TECHNICAL SKILLS & COMPETENCIES</h4>
         <div style="font-size: 0.88rem; line-height: 1.8; color: #334155; margin-bottom: 20px;">
     """
     
     for cat, val in skills_grouped.items():
-        html_out += f'<div style="margin-bottom: 4px;"><strong>{cat}:</strong> <span style="color: #0369a1;">{val}</span></div>'
+        html_out += f'<div style="margin-bottom: 4px;"><strong>{html.escape(str(cat))}:</strong> <span style="color: #0369a1;">{html.escape(str(val))}</span></div>'
         
     html_out += """
         </div>
-
-        <!-- PROFESSIONAL EXPERIENCE -->
-        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">PROFESSIONAL EXPERIENCE</h3>
+        <h4 style="color: #1e3a8a; font-size: 1rem; margin-top: 15px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; font-weight:700;">PROFESSIONAL EXPERIENCE</h4>
     """
 
     for role in exp_list:
-        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">{role.get("role_title")}</p><ul style="margin-top: 4px; margin-bottom: 16px; padding-left: 20px; font-size: 0.88rem; line-height: 1.55;">'
+        role_title = html.escape(str(role.get("role_title", "")))
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.92rem; margin-top:12px;">{role_title}</p><ul style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px; font-size: 0.86rem; line-height: 1.55;">'
         for b in role.get("bullets", []):
-            html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
+            clean_b = html.escape(str(b)).replace("**", "")
+            html_out += f'<li style="margin-bottom: 6px;">{clean_b}</li>'
         html_out += '</ul>'
 
     html_out += """
-        <!-- PROJECTS -->
-        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">KEY PROJECTS</h3>
+        <h4 style="color: #1e3a8a; font-size: 1rem; margin-top: 15px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; font-weight:700;">KEY PROJECTS</h4>
     """
 
     for proj in proj_list:
-        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">{proj.get("project_title")}</p><ul style="margin-top: 4px; margin-bottom: 16px; padding-left: 20px; font-size: 0.88rem; line-height: 1.55;">'
+        proj_title = html.escape(str(proj.get("project_title", "")))
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.92rem; margin-top:12px;">{proj_title}</p><ul style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px; font-size: 0.86rem; line-height: 1.55;">'
         for b in proj.get("bullets", []):
-            html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
+            clean_b = html.escape(str(b)).replace("**", "")
+            html_out += f'<li style="margin-bottom: 6px;">{clean_b}</li>'
         html_out += '</ul>'
 
     html_out += "</div>"
