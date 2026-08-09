@@ -24,10 +24,16 @@ def get_pdf_preview_html(pdf_bytes, height=850):
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
     return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}" style="border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"></iframe>'
 
-def get_docx_preview_text(uploaded_file):
-    uploaded_file.seek(0)
-    doc = docx.Document(uploaded_file)
-    uploaded_file.seek(0)
+def get_docx_preview_text(uploaded_file_or_bytes):
+    """Reads docx paragraphs into clean formatted text for display."""
+    if isinstance(uploaded_file_or_bytes, bytes):
+        if not uploaded_file_or_bytes:
+            return ""
+        doc = docx.Document(BytesIO(uploaded_file_or_bytes))
+    else:
+        uploaded_file_or_bytes.seek(0)
+        doc = docx.Document(uploaded_file_or_bytes)
+        uploaded_file_or_bytes.seek(0)
     lines = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(lines)
 
@@ -54,7 +60,7 @@ def generate_paper_sheet_tailored_html(results):
         
         <!-- HEADER / TITLE -->
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; color: #0f172a; font-family: sans-serif; font-weight: 700;">OPTMIZED RESUME PREVIEW</h2>
+            <h2 style="margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; color: #0f172a; font-family: sans-serif; font-weight: 700;">OPTIMIZED RESUME PREVIEW</h2>
             <span style="font-size: 0.8rem; color: #64748b; font-family: sans-serif;">Yellow highlights indicate aligned ATS keywords & optimized bullet metrics</span>
         </div>
 
