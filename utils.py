@@ -19,9 +19,10 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
-def get_pdf_preview_html(pdf_bytes):
+def get_pdf_preview_html(pdf_bytes, height=750):
+    """Generates an embedded iframe for full-page PDF viewing."""
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600" style="border:1px solid #ccc; border-radius:8px;"></iframe>'
+    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}" style="border:1px solid #cbd5e1; border-radius:12px;"></iframe>'
 
 def get_docx_preview_text(uploaded_file):
     uploaded_file.seek(0)
@@ -29,6 +30,63 @@ def get_docx_preview_text(uploaded_file):
     uploaded_file.seek(0)
     lines = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(lines)
+
+def generate_highlighted_optimized_html(results):
+    """
+    Renders an HTML preview of the optimized resume with visual highlights 
+    on tailored keywords, metrics, and new bullet points.
+    """
+    sec2 = results.get("section_2_tailored_content", {})
+    keywords = results.get("post_optimization", {}).get("matching_keywords", [])
+    
+    # Construct structured HTML document
+    summary = sec2.get("professional_summary", "")
+    skills_grouped = sec2.get("core_competencies_grouped", {})
+    exp_list = sec2.get("professional_experience", [])
+    proj_list = sec2.get("projects", [])
+
+    # Apply inline yellow highlights to keywords
+    for kw in keywords:
+        if len(kw) > 2:
+            summary = summary.replace(kw, f'<mark style="background-color: #fef08a; padding: 1px 4px; border-radius: 4px; font-weight:600;">{kw}</mark>')
+
+    html_out = f"""
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; color: #1e293b; max-height: 750px; overflow-y: auto;">
+        <h2 style="color: #1e3a8a; margin-top: 0; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">TAILORED RESUME PREVIEW</h2>
+        
+        <h4 style="color: #0f172a; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Professional Summary</h4>
+        <p style="font-size: 0.9rem; line-height: 1.6; color: #334155; background: #f8fafc; padding: 12px; border-left: 4px solid #2563eb; border-radius: 4px;">{summary}</p>
+        
+        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Core Competencies & Skills</h4>
+        <div style="font-size: 0.88rem; line-height: 1.8; color: #334155;">
+    """
+    
+    for cat, val in skills_grouped.items():
+        html_out += f'<div><strong>{cat}:</strong> <span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">{val}</span></div>'
+        
+    html_out += """
+        </div>
+        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Professional Experience (Google XYZ Formula)</h4>
+    """
+
+    for role in exp_list:
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">{role.get("role_title")}</p><ul style="margin-top: 4px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
+        for b in role.get("bullets", []):
+            html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
+        html_out += '</ul>'
+
+    html_out += """
+        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Projects</h4>
+    """
+
+    for proj in proj_list:
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">{proj.get("project_title")}</p><ul style="margin-top: 4px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
+        for b in proj.get("bullets", []):
+            html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
+        html_out += '</ul>'
+
+    html_out += "</div>"
+    return html_out
 
 def replace_paragraph_text_keep_formatting(paragraph, new_text):
     if len(paragraph.runs) > 0:
@@ -52,14 +110,7 @@ def replace_paragraph_text_keep_formatting(paragraph, new_text):
         paragraph.text = new_text
 
 def build_updated_docx_inplace(original_file_bytes, file_type, results, selections):
-    """
-    Safely creates/edits a Word document.
-    - If input was .docx: Performs in-place paragraph edits to retain original document formatting.
-    - If input was .pdf: Creates a clean new .docx document populated with the AI tailored output.
-    """
     output = BytesIO()
-    
-    # Check if the uploaded file is a true .docx file
     is_docx = (file_type == 'docx') and original_file_bytes and len(original_file_bytes) > 0
 
     if is_docx:
@@ -73,17 +124,14 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
 
     sec2 = results.get("section_2_tailored_content", {})
 
-    # BRANCH 1: IN-PLACE PARAGRAPH OVERWRITE FOR .DOCX FILES
     if is_docx:
         p_texts = [p.text.strip().upper() for p in doc.paragraphs]
 
-        # 1. SUMMARY
         if selections.get("apply_summary", True) and "PROFESSIONAL SUMMARY" in p_texts:
             idx = p_texts.index("PROFESSIONAL SUMMARY")
             if idx + 1 < len(doc.paragraphs):
                 replace_paragraph_text_keep_formatting(doc.paragraphs[idx + 1], sec2.get("professional_summary", ""))
 
-        # 2. GROUPED SKILLS
         if selections.get("apply_skills", True):
             for header in ["TECHNICAL SKILLS", "CORE COMPETENCIES", "SKILLS"]:
                 if header in p_texts:
@@ -97,7 +145,6 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                             offset += 1
                     break
 
-        # 3. EXPERIENCE BULLETS
         if selections.get("apply_exp", True) and "WORK EXPERIENCE" in p_texts:
             exp_idx = p_texts.index("WORK EXPERIENCE")
             exp_data = sec2.get("professional_experience", [])
@@ -113,7 +160,6 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                         replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_bullets[bullet_counter])
                         bullet_counter += 1
 
-        # 4. PROJECTS
         if selections.get("apply_projects", True) and "PROJECTS" in p_texts:
             proj_idx = p_texts.index("PROJECTS")
             proj_data = sec2.get("projects", [])
@@ -129,16 +175,13 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                         replace_paragraph_text_keep_formatting(doc.paragraphs[i], all_proj_bullets[proj_counter])
                         proj_counter += 1
 
-    # BRANCH 2: CLEAN NEW .DOCX GENERATION FOR PDF UPLOADS
     else:
         doc.add_heading("TAILORED RESUME", level=1)
 
-        # 1. SUMMARY
         if selections.get("apply_summary", True):
             doc.add_heading("PROFESSIONAL SUMMARY", level=2)
             doc.add_paragraph(sec2.get("professional_summary", ""))
 
-        # 2. GROUPED SKILLS
         if selections.get("apply_skills", True):
             doc.add_heading("TECHNICAL SKILLS", level=2)
             grouped_skills = sec2.get("core_competencies_grouped", {})
@@ -148,7 +191,6 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                 r.bold = True
                 p.add_run(str(val))
 
-        # 3. EXPERIENCE BULLETS
         if selections.get("apply_exp", True):
             doc.add_heading("WORK EXPERIENCE", level=2)
             for role in sec2.get("professional_experience", []):
@@ -157,7 +199,6 @@ def build_updated_docx_inplace(original_file_bytes, file_type, results, selectio
                     p = doc.add_paragraph(b)
                     p.paragraph_format.left_indent = docx.shared.Inches(0.25)
 
-        # 4. PROJECTS
         if selections.get("apply_projects", True):
             doc.add_heading("PROJECTS", level=2)
             for proj in sec2.get("projects", []):
