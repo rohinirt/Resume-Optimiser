@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from utils import (
     extract_text_from_file, 
     get_pdf_preview_html, 
@@ -256,7 +257,7 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SIDE BY SIDE RESUME VIEWERS (FIXED HTML RENDERING)
+    # SIDE BY SIDE RESUME VIEWERS (FIXED HTML RENDERER)
     st.markdown("### 📄 Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
@@ -266,17 +267,17 @@ elif st.session_state['page'] == 'results':
         resume_bytes = st.session_state.get('resume_bytes', b"")
         
         if file_type == 'pdf':
-            pdf_html = get_pdf_preview_html(resume_bytes, height=800)
+            pdf_html = get_pdf_preview_html(resume_bytes, height=1100)
             st.markdown(pdf_html, unsafe_allow_html=True)
         else:
-            docx_html = get_docx_preview_html(resume_bytes, height=800)
+            docx_html = get_docx_preview_html(resume_bytes, height=1100)
             st.markdown(docx_html, unsafe_allow_html=True)
 
     with view_right:
         st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
         paper_html = generate_paper_sheet_tailored_html(res)
-        # CRITICAL FIX: Explicitly render compiled HTML
-        st.markdown(paper_html, unsafe_allow_html=True)
+        # NATIVE STREAMLIT COMPONENT RENDERER (PREVENTS RAW CODE PRINTING)
+        components.html(paper_html, height=1100, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
