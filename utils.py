@@ -366,7 +366,7 @@ def generate_new_formatted_docx(results):
             for part, is_bold in b_spans:
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
-                r_b.font.size = Pt(8.8)
+                r_b.font.size = Pt(9)
                 r_b.font.bold = is_bold # Explicitly set bold per span
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
@@ -392,7 +392,7 @@ def generate_new_formatted_docx(results):
             for part, is_bold in p_spans:
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
-                r_b.font.size = Pt(8.8)
+                r_b.font.size = Pt(9)
                 r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
@@ -414,7 +414,7 @@ def generate_new_formatted_docx(results):
             
             r_rest = p_edu.add_run(f",{parts[1]}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(0)
             r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
@@ -442,7 +442,7 @@ def generate_new_formatted_docx(results):
             
             r_rest = p_cert.add_run(f",{parts[1]}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(9)
             r_rest.font.bold = False
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
