@@ -282,7 +282,7 @@ elif st.session_state['page'] == 'results':
             updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
             st.download_button(
-                label="📥 Download Optimized Resume (.docx)",
+                label="📥 Download",
                 data=updated_docx,
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
