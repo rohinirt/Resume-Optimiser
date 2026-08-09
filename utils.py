@@ -74,8 +74,8 @@ def render_spans_to_html(text):
 
 def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
     """
-    Renders Original Master Resume using the EXACT same CSS hierarchy, blue 10pt headers,
-    bold education/certifications, and black body text as the Tailored Preview.
+    Renders Original Master Resume with the EXACT same structure, bullet dots,
+    bold category prefixes, and spacing as the Tailored Resume Preview.
     """
     if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
         try:
@@ -95,32 +95,66 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
 
     paragraphs_html = ""
     current_section = ""
+    in_bullet_list = False
 
     for txt in body_lines:
-        # Detect section headings
-        if txt.isupper() and len(txt) < 40:
-            current_section = txt.upper()
-            paragraphs_html += f'<div class="section-title">{html.escape(txt)}</div>'
-            continue
-
         escaped_txt = html.escape(txt)
 
-        # Apply specific formatting depending on section
-        if "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
-            if "," in txt:
-                parts = txt.split(",", 1)
-                paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 4px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0])}</strong>,{html.escape(parts[1])}</div>'
-            else:
-                paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 4px; color: #000000;"><strong style="font-size: 9.5pt;">{escaped_txt}</strong></div>'
-        
-        elif txt.startswith("•") or txt.startswith("-") or txt.startswith("*"):
+        # 1. Detect Section Headers
+        if txt.isupper() and len(txt) < 40:
+            if in_bullet_list:
+                paragraphs_html += "</ul>"
+                in_bullet_list = False
+            current_section = txt.upper()
+            paragraphs_html += f'<div class="section-title">{escaped_txt}</div>'
+            continue
+
+        # 2. Format Bullet Points (if line starts with bullet symbols OR sits under Experience/Projects)
+        is_bullet = txt.startswith("•") or txt.startswith("-") or txt.startswith("*") or (
+            ("EXPERIENCE" in current_section or "PROJECTS" in current_section) and len(txt) > 30 and not any(k in txt for k in ["Jan 2", "Oct 2", "2026", "2025", "2024"])
+        )
+
+        if is_bullet:
+            if not in_bullet_list:
+                paragraphs_html += '<ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
+                in_bullet_list = True
+            
             clean_bullet = txt.lstrip("•-* ").strip()
             formatted_bullet = render_spans_to_html(clean_bullet)
-            paragraphs_html += f'<li style="margin-bottom: 4px; color: #000000; font-size: 0.86rem; line-height: 1.5;">{formatted_bullet}</li>'
-        
+            paragraphs_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_bullet}</li>'
+
+        # 3. Format Non-Bullet Paragraphs (Technical Skills, Job Titles, Education)
         else:
-            formatted_line = render_spans_to_html(txt)
-            paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 6px;">{formatted_line}</p>'
+            if in_bullet_list:
+                paragraphs_html += "</ul>"
+                in_bullet_list = False
+
+            # Bold Skill Categories (e.g., "Visualization & BI:")
+            if ":" in txt and ("SKILLS" in current_section or len(txt) < 80):
+                parts = txt.split(":", 1)
+                formatted_line = f'<strong>{html.escape(parts[0])}:</strong>{render_spans_to_html(parts[1])}'
+                paragraphs_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;">{formatted_line}</div>'
+            
+            # Bold Role Titles (e.g., "Data Analytics Specialist | Uber")
+            elif "EXPERIENCE" in current_section or "PROJECTS" in current_section:
+                formatted_line = render_spans_to_html(txt)
+                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{formatted_line}</p>'
+            
+            # Education & Certifications
+            elif "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
+                if "," in txt:
+                    parts = txt.split(",", 1)
+                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0])}</strong>,{html.escape(parts[1])}</div>'
+                else:
+                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{escaped_txt}</strong></div>'
+            
+            # Standard Body Paragraph (Summary)
+            else:
+                formatted_line = render_spans_to_html(txt)
+                paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{formatted_line}</p>'
+
+    if in_bullet_list:
+        paragraphs_html += "</ul>"
 
     return f"""
     <!DOCTYPE html>
@@ -158,11 +192,6 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-            }}
-            ul {{
-                margin-top: 2px;
-                margin-bottom: 8px;
-                padding-left: 18px;
             }}
         </style>
     </head>
