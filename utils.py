@@ -19,10 +19,10 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
-def get_pdf_preview_html(pdf_bytes, height=750):
-    """Generates an embedded iframe for full-page PDF viewing."""
+def get_pdf_preview_html(pdf_bytes, height=850):
+    """Generates an embedded iframe for full original PDF viewing."""
     base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}" style="border:1px solid #cbd5e1; border-radius:12px;"></iframe>'
+    return f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{height}" style="border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"></iframe>'
 
 def get_docx_preview_text(uploaded_file):
     uploaded_file.seek(0)
@@ -31,15 +31,14 @@ def get_docx_preview_text(uploaded_file):
     lines = [p.text for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(lines)
 
-def generate_highlighted_optimized_html(results):
+def generate_paper_sheet_tailored_html(results):
     """
-    Renders an HTML preview of the optimized resume with visual highlights 
-    on tailored keywords, metrics, and new bullet points.
+    Renders an optimized resume as a realistic A4 white paper sheet document 
+    with highlighted keywords and formatted bullet points.
     """
     sec2 = results.get("section_2_tailored_content", {})
     keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
-    # Construct structured HTML document
     summary = sec2.get("professional_summary", "")
     skills_grouped = sec2.get("core_competencies_grouped", {})
     exp_list = sec2.get("professional_experience", [])
@@ -47,40 +46,50 @@ def generate_highlighted_optimized_html(results):
 
     # Apply inline yellow highlights to keywords
     for kw in keywords:
-        if len(kw) > 2:
-            summary = summary.replace(kw, f'<mark style="background-color: #fef08a; padding: 1px 4px; border-radius: 4px; font-weight:600;">{kw}</mark>')
+        if len(kw) > 2 and kw in summary:
+            summary = summary.replace(kw, f'<mark style="background-color: #fef08a; padding: 2px 4px; border-radius: 3px; font-weight: 600; color: #1e293b;">{kw}</mark>')
 
     html_out = f"""
-    <div style="background-color: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; color: #1e293b; max-height: 750px; overflow-y: auto;">
-        <h2 style="color: #1e3a8a; margin-top: 0; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">TAILORED RESUME PREVIEW</h2>
+    <div style="background-color: #ffffff; padding: 40px; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); font-family: 'Times New Roman', Times, serif, sans-serif; color: #1e293b; max-height: 850px; overflow-y: auto;">
         
-        <h4 style="color: #0f172a; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Professional Summary</h4>
-        <p style="font-size: 0.9rem; line-height: 1.6; color: #334155; background: #f8fafc; padding: 12px; border-left: 4px solid #2563eb; border-radius: 4px;">{summary}</p>
+        <!-- HEADER / TITLE -->
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; color: #0f172a; font-family: sans-serif; font-weight: 700;">OPTMIZED RESUME PREVIEW</h2>
+            <span style="font-size: 0.8rem; color: #64748b; font-family: sans-serif;">Yellow highlights indicate aligned ATS keywords & optimized bullet metrics</span>
+        </div>
+
+        <!-- PROFESSIONAL SUMMARY -->
+        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">PROFESSIONAL SUMMARY</h3>
+        <p style="font-size: 0.9rem; line-height: 1.6; color: #334155; margin-bottom: 20px;">{summary}</p>
         
-        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Core Competencies & Skills</h4>
-        <div style="font-size: 0.88rem; line-height: 1.8; color: #334155;">
+        <!-- CORE COMPETENCIES -->
+        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">TECHNICAL SKILLS & COMPETENCIES</h3>
+        <div style="font-size: 0.88rem; line-height: 1.8; color: #334155; margin-bottom: 20px;">
     """
     
     for cat, val in skills_grouped.items():
-        html_out += f'<div><strong>{cat}:</strong> <span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">{val}</span></div>'
+        html_out += f'<div style="margin-bottom: 4px;"><strong>{cat}:</strong> <span style="color: #0369a1;">{val}</span></div>'
         
     html_out += """
         </div>
-        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Professional Experience (Google XYZ Formula)</h4>
+
+        <!-- PROFESSIONAL EXPERIENCE -->
+        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">PROFESSIONAL EXPERIENCE</h3>
     """
 
     for role in exp_list:
-        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">{role.get("role_title")}</p><ul style="margin-top: 4px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">{role.get("role_title")}</p><ul style="margin-top: 4px; margin-bottom: 16px; padding-left: 20px; font-size: 0.88rem; line-height: 1.55;">'
         for b in role.get("bullets", []):
             html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
         html_out += '</ul>'
 
     html_out += """
-        <h4 style="color: #0f172a; margin-top: 20px; margin-bottom: 6px; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px;">Projects</h4>
+        <!-- PROJECTS -->
+        <h3 style="color: #1e3a8a; font-size: 1.05rem; margin-top: 15px; margin-bottom: 6px; font-family: sans-serif; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">KEY PROJECTS</h3>
     """
 
     for proj in proj_list:
-        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">{proj.get("project_title")}</p><ul style="margin-top: 4px; padding-left: 20px; font-size: 0.88rem; line-height: 1.6;">'
+        html_out += f'<p style="font-weight: 700; color: #0f172a; margin-bottom: 4px; font-size: 0.95rem;">{proj.get("project_title")}</p><ul style="margin-top: 4px; margin-bottom: 16px; padding-left: 20px; font-size: 0.88rem; line-height: 1.55;">'
         for b in proj.get("bullets", []):
             html_out += f'<li style="margin-bottom: 6px;">{b}</li>'
         html_out += '</ul>'
