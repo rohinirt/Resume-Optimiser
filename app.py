@@ -279,7 +279,6 @@ elif st.session_state['page'] == 'results':
         with hdr_col1:
             st.markdown("##### ✨ Tailored Resume Sheet (Highlights Applied)")
         with hdr_col2:
-            # GENERATE BRAND NEW BEAUTIFULLY FORMATTED DOCX MATCHING PREVIEW
             updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
             st.download_button(
