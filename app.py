@@ -281,8 +281,7 @@ elif st.session_state['page'] == 'results':
             score_val = post.get('ats_score', 93)
             verdict_text = "Great Match!"
 
-        # CARD CONTAINER SPLIT 50/50: SEGMENTED BUTTON ON LEFT, ATS SCORE ON RIGHT
-        st.markdown('<div class="panel-card" style="padding: 12px 16px;">', unsafe_allow_html=True)
+        # SPLIT 50/50 DIRECTLY WITHOUT PANEL-CARD BACKGROUND WRAPPER
         top_card_c1, top_card_c2 = st.columns([1, 1])
 
         with top_card_c1:
@@ -306,7 +305,7 @@ elif st.session_state['page'] == 'results':
                 </div>
             """, unsafe_allow_html=True)
             
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
         if active_tab == 'Analysis':
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
