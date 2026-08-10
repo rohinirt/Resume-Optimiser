@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH SEGMENTED CONTROL & CLEAN CARDS
+# EXACT SAAS STYLING WITH CLEAN CARDS & SEGMENTED CONTROL
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -229,14 +229,14 @@ elif st.session_state['page'] == 'results':
 
     active_tab = st.session_state.get('active_tab', 'Analysis')
 
-    # TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
-    col_logo, col_spacer, col_toggle, col_dl = st.columns([1.5, 1.2, 1.8, 1.0])
+    # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
+    col_logo, col_toggle, col_dl = st.columns([2.5, 2.0, 1.2])
     
     with col_logo:
         st.markdown("""
-            <div style="display: flex; align-items: center; gap: 10px; padding-top: 6px;">
-                <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
-                <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
+            <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
+                <div style="background: #2563eb; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
+                <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
             </div>
         """, unsafe_allow_html=True)
 
@@ -316,7 +316,6 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
-            # FULL WIDTH SECTIONS INSTEAD OF TWO COLUMNS (REMOVED MATCH BREAKDOWN CARD/CHART)
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
             tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
             st.markdown(f"""
@@ -341,6 +340,14 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
+            # PROPERLY ENCLOSED STRATEGY CARD CONTAINER SO BULLETS DON'T SPILL OUTSIDE
+            strat_points = fitness.get('alignment_strategy', [
+                "Highlight automated ETL data processing pipelines and record scale.",
+                "Position technical competencies upfront for immediate ATS keyword weighting.",
+                "Ensure bullet points strictly adhere to the Google XYZ impact formula."
+            ])
+            strat_items_html = "".join([f"<li style='margin-bottom: 6px;'>{strat}</li>" for strat in strat_points])
+            
             st.markdown(f"""
             <div class="panel-card">
                 <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
@@ -352,16 +359,10 @@ elif st.session_state['page'] == 'results':
                 </div>
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
                 <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #64748b; line-height: 1.5;">
+                    {strat_items_html}
+                </ul>
+            </div>
             """, unsafe_allow_html=True)
-            
-            strat_points = fitness.get('alignment_strategy', [
-                "Highlight automated ETL data processing pipelines and record scale.",
-                "Position technical competencies upfront for immediate ATS keyword weighting.",
-                "Ensure bullet points strictly adhere to the Google XYZ impact formula."
-            ])
-            for strat in strat_points:
-                st.markdown(f"<li>{strat}</li>", unsafe_allow_html=True)
-            st.markdown("</ul></div>", unsafe_allow_html=True)
 
         else:
             st.markdown("""
