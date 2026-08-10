@@ -9,8 +9,8 @@ from utils import (
 from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
 st.set_page_config(
-    page_title="ResumeAI Pro | Targeted ATS Optimizer", 
-    page_icon="🎯", 
+    page_title="ResumeForge AI | Targeted ATS Optimizer", 
+    page_icon="⚡", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -21,7 +21,7 @@ if 'page' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# MODERN WEB APPLICATION CSS
+# MODERN APP STYLING & COLOR PALETTE (NO EMOJIS)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -41,24 +41,25 @@ st.markdown("""
     }
     
     .stApp {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
     }
     
     .hero-container {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        padding: 40px;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        padding: 48px;
         border-radius: 20px;
         color: #ffffff;
         margin-bottom: 28px;
-        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.2);
+        border: 1px solid #334155;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
         text-align: center;
     }
     
     .hero-title {
-        font-size: 2.8rem;
+        font-size: 3rem;
         font-weight: 800;
-        letter-spacing: -1px;
+        letter-spacing: -1.5px;
         margin-bottom: 12px;
         background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
         -webkit-background-clip: text;
@@ -67,30 +68,40 @@ st.markdown("""
 
     .hero-subtitle {
         color: #94a3b8;
-        font-size: 1.15rem;
-        max-width: 750px;
+        font-size: 1.2rem;
+        max-width: 800px;
         margin: 0 auto;
         line-height: 1.6;
     }
 
+    .upload-box {
+        background: #1e293b;
+        border: 2px dashed #475569;
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+    }
+
     .feature-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: #1e293b;
+        border: 1px solid #334155;
         border-radius: 12px;
-        padding: 20px;
+        padding: 22px;
         text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     
-    .feature-icon {
-        font-size: 1.8rem;
+    .feature-title {
+        color: #38bdf8;
+        font-weight: 700;
+        font-size: 1.05rem;
         margin-bottom: 8px;
     }
 
     .tag-green {
-        background-color: #dcfce7;
-        color: #15803d;
-        border: 1px solid #bbf7d0;
+        background-color: rgba(22, 163, 74, 0.2);
+        color: #4ade80;
+        border: 1px solid rgba(74, 222, 128, 0.3);
         padding: 4px 10px;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -100,9 +111,9 @@ st.markdown("""
     }
     
     .tag-red {
-        background-color: #fee2e2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
+        background-color: rgba(220, 38, 38, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(248, 113, 113, 0.3);
         padding: 4px 10px;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -111,7 +122,6 @@ st.markdown("""
         margin: 2px;
     }
 
-    /* BLUE DOWNLOAD BUTTON STYLING */
     div.stDownloadButton > button {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
         color: #ffffff !important;
@@ -120,7 +130,7 @@ st.markdown("""
         padding: 10px 20px !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
     }
 
     div.stButton > button {
@@ -139,47 +149,33 @@ st.markdown("""
 if st.session_state['page'] == 'landing':
     st.markdown("""
     <div class="hero-container">
-        <h1 class="hero-title">Target Your Resume For Any Job Description</h1>
-        <p class="hero-subtitle">Optimize your master resume against target job requirements, match ATS keywords, highlight Google XYZ metrics, and verify salary benchmarks in seconds.</p>
+        <h1 class="hero-title">ResumeForge AI</h1>
+        <p class="hero-subtitle">High-Precision ATS Optimization & Executive Resume Tailoring Engine. Built for rigorous algorithmic matching and recruiter impact.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### ⚡ What Happens After You Upload?")
-    f1, f2, f3, f4 = st.columns(4)
-    with f1:
-        st.markdown("""<div class="feature-card"><div class="feature-icon">🔍</div><strong>1. ATS Gap Analysis</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Extracts required tools & calculates pre/post match scores.</p></div>""", unsafe_allow_html=True)
-    with f2:
-        st.markdown("""<div class="feature-card"><div class="feature-icon">📝</div><strong>2. Google XYZ Rewrites</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Restructures experience bullets using action verbs & metrics.</p></div>""", unsafe_allow_html=True)
-    with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-icon">👁️</div><strong>3. Side-by-Side View</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Compare original document vs highlighted paper preview.</p></div>""", unsafe_allow_html=True)
-    with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-icon">🌐</div><strong>4. Live Search & Export</strong><p style="font-size:0.82rem; color:#64748b; margin-top:4px;">Searches real web salary data & exports formatted .docx.</p></div>""", unsafe_allow_html=True)
+    # HIGH FOCUS UPLOAD SECTION SHIFTED TO TOP
+    st.markdown("### Step 1: Provide Source Files & Target Job Description")
+    with st.container():
+        st.markdown('<div class="upload-box">', unsafe_allow_html=True)
+        uc1, uc2, uc3, uc4 = st.columns([1, 1, 1, 1.3])
+        with uc1:
+            uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
+        with uc2:
+            uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
+        with uc3:
+            uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
+        with uc4:
+            jd_input = st.text_area("Target Job Description (JD)", height=115, placeholder="Paste target job responsibilities and technical requirements...")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### 📥 Step 1: Upload Files & Target Job Description")
-
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1.2])
-
-    with col1:
-        uploaded_resume = st.file_uploader("1. Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
-
-    with col2:
-        uploaded_experience = st.file_uploader("2. Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
-
-    with col3:
-        uploaded_projects = st.file_uploader("3. Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
-
-    with col4:
-        jd_input = st.text_area("4. Target Job Description (JD)", height=130, placeholder="Paste target job responsibilities and requirements...")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    analyze_btn = st.button("✨ Target Resume & Launch Results Workspace", type="primary", use_container_width=True)
+    analyze_btn = st.button("Initialize ATS Audit & Tailoring Workspace", type="primary", use_container_width=True)
 
     if analyze_btn:
         if not uploaded_resume or not jd_input:
             st.warning("Please upload a Master Resume and paste a Job Description to proceed.")
         else:
-            with st.spinner("Extracting documents, parsing keywords, and tailoring your resume..."):
+            with st.spinner("Executing semantic keyword mapping, gap analysis, and layout generation..."):
                 file_bytes = uploaded_resume.read()
                 uploaded_resume.seek(0)
                 st.session_state['resume_bytes'] = file_bytes
@@ -201,33 +197,49 @@ if st.session_state['page'] == 'landing':
                 st.session_state['page'] = 'results'
                 st.rerun()
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Workflow Architecture")
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#94a3b8;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
+    with f2:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#94a3b8;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
+    with f3:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#94a3b8;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
+    with f4:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#94a3b8;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
+
 # PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
     
     nav_col1, nav_col2 = st.columns([1, 6])
     with nav_col1:
-        st.button("⬅️ Back to Uploads", on_click=go_to_landing, use_container_width=True)
+        st.button("Back to Uploads", on_click=go_to_landing, use_container_width=True)
     with nav_col2:
-        st.markdown("<h2 style='margin:0; font-weight:800; color:#0f172a;'>🎯 Resume Optimization Workspace</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='margin:0; font-weight:800; color:#f8fafc;'>Resume Optimization Workspace</h2>", unsafe_allow_html=True)
 
     st.markdown("---")
 
     res = st.session_state.get('results', {})
     pre = res.get("pre_optimization", {})
     post = res.get("post_optimization", {})
+    audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # METRICS ROW
+    # METRICS & TRANSPARENT AUDIT DASHBOARD
     m_col1, m_col2 = st.columns([1, 1])
 
     with m_col1:
-        st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:20px; border-radius:12px;">', unsafe_allow_html=True)
-        st.subheader("📊 Match Score & Keywords")
+        st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+        st.subheader("ATS Score & Keyword Audit")
+        
         sc1, sc2 = st.columns(2)
-        sc1.metric("Pre-ATS Score", f"{pre.get('ats_score', 0)}%")
-        sc2.metric("Post-ATS Score", f"{post.get('ats_score', 0)}%", delta=f"+{post.get('ats_score', 0) - pre.get('ats_score', 0)}%")
+        sc1.metric("Pre-Optimization Score", f"{pre.get('ats_score', 0)}%")
+        sc2.metric("Post-Optimization Score", f"{post.get('ats_score', 0)}%", delta=f"+{post.get('ats_score', 0) - pre.get('ats_score', 0)}%")
         
         st.markdown("---")
+        
+        # KEYWORD PILLS
         k1, k2 = st.columns(2)
         with k1:
             st.write("**Pre-Matching Keywords:**")
@@ -239,30 +251,52 @@ elif st.session_state['page'] == 'results':
             st.markdown("".join([f'<span class="tag-green">{k}</span>' for k in post.get('matching_keywords', [])]), unsafe_allow_html=True)
             st.write("**Post-Missing Keywords:**")
             st.markdown("".join([f'<span class="tag-red">{k}</span>' for k in post.get('missing_keywords', [])]), unsafe_allow_html=True)
+            
         st.markdown('</div>', unsafe_allow_html=True)
 
     with m_col2:
-        st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:20px; border-radius:12px;">', unsafe_allow_html=True)
-        st.subheader("📌 Role Fitness & Strategy")
-        st.write("**Fitness Summary:**", fitness.get("role_fitness_summary", ""))
-        st.write("**Missing Elements & Gaps:**", fitness.get("gaps_and_missing_elements", ""))
-        st.write("**Alignment Positioning Strategy:**")
-        for strat in fitness.get("alignment_strategy", []):
-            st.write(f"- {strat}")
+        st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+        st.subheader("Granular Audit Breakdown")
+        
+        # 5 AUDIT CATEGORIES DISPLAY
+        audit_mapping = [
+            ("Hard Skills & Keyword Match (40%)", audit.get("hard_skills", {})),
+            ("Formatting & Parsability (15%)", audit.get("formatting", {})),
+            ("Impact & Metrics / Google XYZ (25%)", audit.get("impact_metrics", {})),
+            ("Length & Brevity (10%)", audit.get("length_brevity", {})),
+            ("Section Completeness (10%)", audit.get("section_completeness", {}))
+        ]
+        
+        for cat_name, data in audit_mapping:
+            score_val = data.get("score", 80)
+            st.write(f"**{cat_name}** — Score: `{score_val}%`")
+            st.progress(score_val)
+            st.caption(f"Feedback: {data.get('feedback', '')}")
+            fixes = data.get("actionable_fixes", [])
+            if fixes:
+                st.caption(f"Actionable Fix: {fixes[0]}")
+            st.markdown("---")
             
-        st.markdown("---")
-        st.markdown("###### 🌐 Live Web Search Salary Reference")
+        # TOGGLE FOR ORIGINAL ROLE FITNESS & ALIGNMENT STRATEGY
+        with st.expander("Show Original Role Fitness & Alignment Strategy"):
+            st.write("**Fitness Summary:**", fitness.get("role_fitness_summary", ""))
+            st.write("**Gaps & Missing Elements:**", fitness.get("gaps_and_missing_elements", ""))
+            st.write("**Alignment Positioning Strategy:**")
+            for strat in fitness.get("alignment_strategy", []):
+                st.write(f"- {strat}")
+                
+        st.markdown("###### Live Web Search Salary Reference")
         st.success(res.get("salary_benchmark", "No public salary data available."))
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # SIDE BY SIDE RESUME VIEWERS
-    st.markdown("### 📄 Side-by-Side Resume Viewers")
+    st.markdown("### Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
     with view_left:
-        st.markdown("##### Your Resume")
+        st.markdown("##### Master Resume (Source View)")
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
         
@@ -277,12 +311,12 @@ elif st.session_state['page'] == 'results':
     with view_right:
         hdr_col1, hdr_col2 = st.columns([1.5, 1])
         with hdr_col1:
-            st.markdown("##### ✨ Tailored Resume")
+            st.markdown("##### Tailored Resume Preview")
         with hdr_col2:
             updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
             st.download_button(
-                label="📥 Download",
+                label="Download Optimized Resume (.docx)",
                 data=updated_docx,
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -296,13 +330,13 @@ elif st.session_state['page'] == 'results':
     st.markdown("<br>", unsafe_allow_html=True)
 
     # SUMMARY OF CHANGES
-    st.markdown("### 📋 Summary of Key Resume Enhancements")
-    st.markdown('<div style="background:#ffffff; border:1px solid #e2e8f0; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+    st.markdown("### Summary of Key Resume Enhancements")
+    st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
     
     changes = res.get("summary_of_changes", [
-        "Aligned technical skills and competency categories directly with job requirements.",
-        "Rewrote experience bullet points into action-oriented metric statements using the Google XYZ formula.",
-        "Optimized content density to maintain strict 1 A4 page constraints."
+        "Aligned technical competencies directly with job description requirements.",
+        "Restructured experience bullets using Google XYZ formula to highlight metrics.",
+        "Optimized layout geometry to ensure compliance with 1-page A4 constraints."
     ])
     
     for idx, change in enumerate(changes, 1):
