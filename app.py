@@ -305,17 +305,14 @@ elif st.session_state['page'] == 'results':
 
         # COMPACT TOP HEADER CARD WITH CENTER-ALIGNED TEXT AND LARGER FONT SCORE
         st.markdown(f"""
-        <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 14px; padding: 4px 8px; width: 100%;">
-                <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; white-space: nowrap;">
-                    Overall ATS Score <b>{score_val}</b> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
-                </div>
-                <div style="font-size: 2.1rem; font-weight: 800; color: #16a34a; line-height: 1;">
-                    {score_val} <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">/100</span>
-                </div>
+    <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; width: 100%;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
+                Overall ATS Score <span style="color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+""", unsafe_allow_html=True)
 
         if active_tab == 'Analysis':
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
