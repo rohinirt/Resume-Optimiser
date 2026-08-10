@@ -9,8 +9,8 @@ from utils import (
 from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
 st.set_page_config(
-    page_title="ResumeForge AI | Targeted ATS Optimizer", 
-    page_icon="⚡", 
+    page_title="ResumeForge AI | ATS Optimizer", 
+    page_icon="🎯", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -21,8 +21,7 @@ if 'page' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# MODERN APP STYLING & COLOR PALETTE (NO EMOJIS)
-# MODERN LIGHT THEME APP STYLING
+# MODERN MAROON & PINK LUXURY THEME STYLING
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -32,82 +31,69 @@ st.markdown("""
     }
     
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 95% !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 3rem !important;
+        max-width: 92% !important;
     }
     
     header[data-testid="stHeader"] {
         background: transparent !important;
     }
     
-    /* SWITCHED TO CLEAN LIGHT THEME */
     .stApp {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
+        background-color: #fff1f2 !important; /* Soft rose background */
+        color: #500724 !important;
     }
     
     .hero-container {
-        background: linear-gradient(135deg, #f1f5f9 100%, #e2e8f0 0%);
-        padding: 42px;
-        border-radius: 20px;
-        color: #0f172a;
-        margin-bottom: 28px;
-        border: 1px solid #cbd5e1;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        background: linear-gradient(135deg, #831843 0%, #500724 100%);
+        padding: 48px;
+        border-radius: 24px;
+        color: #ffffff;
+        margin-bottom: 32px;
+        box-shadow: 0 20px 40px -15px rgba(131, 24, 67, 0.3);
         text-align: center;
     }
     
     .hero-title {
-        font-size: 3rem;
+        font-size: 3.2rem;
         font-weight: 800;
         letter-spacing: -1.5px;
         margin-bottom: 12px;
-        background: linear-gradient(90deg, #0284c7 0%, #4f46e5 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #fff1f2;
     }
 
     .hero-subtitle {
-        color: #475569;
+        color: #fbcfe8;
         font-size: 1.15rem;
-        max-width: 800px;
+        max-width: 750px;
         margin: 0 auto;
         line-height: 1.6;
     }
 
-    /* LARGER, DISTINCT UPLOAD CARDS WITH ATTRACTIVE COLORS */
-    .upload-card-custom {
+    /* CLEAN INTEGRATED UPLOAD CONTAINER */
+    .upload-section-wrapper {
         background: #ffffff;
-        border: 2px solid #cbd5e1;
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.05);
-        min-height: 210px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        transition: all 0.3s ease;
-    }
-    
-    .upload-card-custom:hover {
-        border-color: #2563eb;
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
+        border: 2px solid #f43f5e;
+        padding: 32px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px -5px rgba(244, 63, 94, 0.1);
+        margin-bottom: 35px;
     }
 
     .feature-card {
         background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        padding: 22px;
+        border: 1px solid #fbcfe8;
+        border-radius: 16px;
+        padding: 24px;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 4px 12px rgba(131, 24, 67, 0.04);
     }
     
     .feature-title {
-        color: #0284c7;
+        color: #831843;
         font-weight: 700;
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         margin-bottom: 8px;
     }
 
@@ -136,24 +122,25 @@ st.markdown("""
     }
 
     div.stDownloadButton > button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
-        font-weight: 700 !important;
-        font-size: 0.95rem !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
-    }
-
-    div.stButton > button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        background: linear-gradient(135deg, #831843 0%, #500724 100%) !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
+        padding: 12px 24px !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 4px 12px rgba(131, 24, 67, 0.3) !important;
+    }
+
+    div.stButton > button {
+        background: linear-gradient(135deg, #831843 0%, #500724 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 12px !important;
         padding: 14px 28px !important;
         font-weight: 700 !important;
         font-size: 1.05rem !important;
+        box-shadow: 0 6px 15px rgba(131, 24, 67, 0.25) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -169,30 +156,20 @@ if st.session_state['page'] == 'landing':
 
     st.markdown("### Step 1: Provide Source Files & Target Job Description")
     
-    # LARGER COLORED UPLOAD CARDS WRAPPER
+    st.markdown('<div class="upload-section-wrapper">', unsafe_allow_html=True)
     uc1, uc2, uc3, uc4 = st.columns(4)
     
     with uc1:
-        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
         uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
     with uc2:
-        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
         uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
     with uc3:
-        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
         uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
     with uc4:
-        st.markdown('<div class="upload-card-custom" style="padding: 15px;">', unsafe_allow_html=True)
-        jd_input = st.text_area("Target Job Description (JD)", height=135, placeholder="Paste job requirements...")
-        st.markdown('</div>', unsafe_allow_html=True)
+        jd_input = st.text_area("Target Job Description (JD)", height=140, placeholder="Paste job requirements...")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
     analyze_btn = st.button("Initialize ATS Audit & Tailoring Workspace", type="primary", use_container_width=True)
 
     if analyze_btn:
@@ -225,13 +202,13 @@ if st.session_state['page'] == 'landing':
     st.markdown("### Workflow Architecture")
     f1, f2, f3, f4 = st.columns(4)
     with f1:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#94a3b8;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#881337;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
     with f2:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#94a3b8;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#881337;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
     with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#94a3b8;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#881337;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
     with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#94a3b8;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#881337;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
 # PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
@@ -240,7 +217,7 @@ elif st.session_state['page'] == 'results':
     with nav_col1:
         st.button("Back to Uploads", on_click=go_to_landing, use_container_width=True)
     with nav_col2:
-        st.markdown("<h2 style='margin:0; font-weight:800; color:#f8fafc;'>Resume Optimization Workspace</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='margin:0; font-weight:800; color:#500724;'>Resume Optimization Workspace</h2>", unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -250,11 +227,10 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # METRICS & TRANSPARENT AUDIT DASHBOARD
     m_col1, m_col2 = st.columns([1, 1])
 
     with m_col1:
-        st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+        st.markdown('<div style="background:#ffffff; border:1px solid #fbcfe8; padding:24px; border-radius:16px; box-shadow: 0 4px 12px rgba(131, 24, 67, 0.04);">', unsafe_allow_html=True)
         st.subheader("ATS Score & Keyword Audit")
         
         sc1, sc2 = st.columns(2)
@@ -263,7 +239,6 @@ elif st.session_state['page'] == 'results':
         
         st.markdown("---")
         
-        # KEYWORD PILLS
         k1, k2 = st.columns(2)
         with k1:
             st.write("**Pre-Matching Keywords:**")
@@ -279,10 +254,9 @@ elif st.session_state['page'] == 'results':
         st.markdown('</div>', unsafe_allow_html=True)
 
     with m_col2:
-        st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+        st.markdown('<div style="background:#ffffff; border:1px solid #fbcfe8; padding:24px; border-radius:16px; box-shadow: 0 4px 12px rgba(131, 24, 67, 0.04);">', unsafe_allow_html=True)
         st.subheader("Granular Audit Breakdown")
         
-        # 5 AUDIT CATEGORIES DISPLAY
         audit_mapping = [
             ("Hard Skills & Keyword Match (40%)", audit.get("hard_skills", {})),
             ("Formatting & Parsability (15%)", audit.get("formatting", {})),
@@ -301,7 +275,6 @@ elif st.session_state['page'] == 'results':
                 st.caption(f"Actionable Fix: {fixes[0]}")
             st.markdown("---")
             
-        # TOGGLE FOR ORIGINAL ROLE FITNESS & ALIGNMENT STRATEGY
         with st.expander("Show Original Role Fitness & Alignment Strategy"):
             st.write("**Fitness Summary:**", fitness.get("role_fitness_summary", ""))
             st.write("**Gaps & Missing Elements:**", fitness.get("gaps_and_missing_elements", ""))
@@ -315,7 +288,6 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SIDE BY SIDE RESUME VIEWERS
     st.markdown("### Side-by-Side Resume Viewers")
     view_left, view_right = st.columns([1, 1])
 
@@ -353,9 +325,8 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # SUMMARY OF CHANGES
     st.markdown("### Summary of Key Resume Enhancements")
-    st.markdown('<div style="background:#1e293b; border:1px solid #334155; padding:24px; border-radius:12px;">', unsafe_allow_html=True)
+    st.markdown('<div style="background:#ffffff; border:1px solid #fbcfe8; padding:24px; border-radius:16px; box-shadow: 0 4px 12px rgba(131, 24, 67, 0.04);">', unsafe_allow_html=True)
     
     changes = res.get("summary_of_changes", [
         "Aligned technical competencies directly with job description requirements.",
