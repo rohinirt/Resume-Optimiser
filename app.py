@@ -22,6 +22,7 @@ def go_to_landing():
     st.session_state['page'] = 'landing'
 
 # MODERN APP STYLING & COLOR PALETTE (NO EMOJIS)
+# MODERN LIGHT THEME APP STYLING
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -31,7 +32,7 @@ st.markdown("""
     }
     
     .block-container {
-        padding-top: 0.5rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 2rem !important;
         max-width: 95% !important;
     }
@@ -40,19 +41,20 @@ st.markdown("""
         background: transparent !important;
     }
     
+    /* SWITCHED TO CLEAN LIGHT THEME */
     .stApp {
-        background-color: #0f172a !important;
-        color: #f8fafc !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
     }
     
     .hero-container {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 48px;
+        background: linear-gradient(135deg, #f1f5f9 100%, #e2e8f0 0%);
+        padding: 42px;
         border-radius: 20px;
-        color: #ffffff;
+        color: #0f172a;
         margin-bottom: 28px;
-        border: 1px solid #334155;
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
         text-align: center;
     }
     
@@ -61,47 +63,58 @@ st.markdown("""
         font-weight: 800;
         letter-spacing: -1.5px;
         margin-bottom: 12px;
-        background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+        background: linear-gradient(90deg, #0284c7 0%, #4f46e5 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
     .hero-subtitle {
-        color: #94a3b8;
-        font-size: 1.2rem;
+        color: #475569;
+        font-size: 1.15rem;
         max-width: 800px;
         margin: 0 auto;
         line-height: 1.6;
     }
 
-    .upload-box {
-        background: #1e293b;
-        border: 2px dashed #475569;
-        padding: 30px;
+    /* LARGER, DISTINCT UPLOAD CARDS WITH ATTRACTIVE COLORS */
+    .upload-card-custom {
+        background: #ffffff;
+        border: 2px solid #cbd5e1;
+        padding: 24px;
         border-radius: 16px;
-        margin-bottom: 30px;
+        box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.05);
+        min-height: 210px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-card-custom:hover {
+        border-color: #2563eb;
+        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
     }
 
     .feature-card {
-        background: #1e293b;
-        border: 1px solid #334155;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
         border-radius: 12px;
         padding: 22px;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
     }
     
     .feature-title {
-        color: #38bdf8;
+        color: #0284c7;
         font-weight: 700;
         font-size: 1.05rem;
         margin-bottom: 8px;
     }
 
     .tag-green {
-        background-color: rgba(22, 163, 74, 0.2);
-        color: #4ade80;
-        border: 1px solid rgba(74, 222, 128, 0.3);
+        background-color: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
         padding: 4px 10px;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -111,9 +124,9 @@ st.markdown("""
     }
     
     .tag-red {
-        background-color: rgba(220, 38, 38, 0.2);
-        color: #f87171;
-        border: 1px solid rgba(248, 113, 113, 0.3);
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
         padding: 4px 10px;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -130,7 +143,7 @@ st.markdown("""
         padding: 10px 20px !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
     }
 
     div.stButton > button {
@@ -154,21 +167,32 @@ if st.session_state['page'] == 'landing':
     </div>
     """, unsafe_allow_html=True)
 
-    # HIGH FOCUS UPLOAD SECTION SHIFTED TO TOP
     st.markdown("### Step 1: Provide Source Files & Target Job Description")
-    with st.container():
-        st.markdown('<div class="upload-box">', unsafe_allow_html=True)
-        uc1, uc2, uc3, uc4 = st.columns([1, 1, 1, 1.3])
-        with uc1:
-            uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
-        with uc2:
-            uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
-        with uc3:
-            uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
-        with uc4:
-            jd_input = st.text_area("Target Job Description (JD)", height=115, placeholder="Paste target job responsibilities and technical requirements...")
+    
+    # LARGER COLORED UPLOAD CARDS WRAPPER
+    uc1, uc2, uc3, uc4 = st.columns(4)
+    
+    with uc1:
+        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
+        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with uc2:
+        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
+        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with uc3:
+        st.markdown('<div class="upload-card-custom">', unsafe_allow_html=True)
+        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with uc4:
+        st.markdown('<div class="upload-card-custom" style="padding: 15px;">', unsafe_allow_html=True)
+        jd_input = st.text_area("Target Job Description (JD)", height=135, placeholder="Paste job requirements...")
         st.markdown('</div>', unsafe_allow_html=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
     analyze_btn = st.button("Initialize ATS Audit & Tailoring Workspace", type="primary", use_container_width=True)
 
     if analyze_btn:
