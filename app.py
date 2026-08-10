@@ -308,27 +308,34 @@ elif st.session_state['page'] == 'results':
         st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
         if active_tab == 'Analysis':
-            matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
-            tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
+            # Extract lists generated from comparing Original Uploaded Resume vs JD
+            matching_kws = pre.get('matching_keywords', post.get('matching_keywords', []))
+            missing_kws = pre.get('missing_keywords', post.get('missing_keywords', []))
+
+            matching_tags = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
+            missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
+
+            # MATCHING KEYWORDS CARD
             st.markdown(f"""
             <div class="panel-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Keywords</span>
                     <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
                 </div>
-                <div style="max-height: 160px; overflow-y: auto;">{tags_html}</div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
+                <div>{matching_tags if matching_tags else '<em style="font-size:0.85rem; color:#64748b;">No matching keywords found.</em>'}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
-            missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
+            # MISSING KEYWORDS CARD (NO HEIGHT/OVERFLOW LIMIT)
             st.markdown(f"""
             <div class="panel-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Keywords</span>
                     <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
                 </div>
-                <div>{missing_tags}</div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
+                <div>{missing_tags if missing_tags else '<em style="font-size:0.85rem; color:#15803d;">No missing keywords! Perfect match.</em>'}</div>
             </div>
             """, unsafe_allow_html=True)
 
