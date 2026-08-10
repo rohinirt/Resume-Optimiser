@@ -308,7 +308,7 @@ elif st.session_state['page'] == 'results':
     <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; width: 100%;">
             <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
-                Overall ATS Score <span style="color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
+                Overall ATS Score <span style="font-size: 1.6rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
             </div>
         </div>
     </div>
