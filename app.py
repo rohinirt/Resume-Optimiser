@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH STREAMLINED PANEL CARD & SEGMENTED CONTROL
+# EXACT SAAS STYLING WITH CLEAN CARDS & SEGMENTED CONTROL
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -303,15 +303,16 @@ elif st.session_state['page'] == 'results':
             score_val = post.get('ats_score', 93)
             verdict_text = "Great Match!"
 
-        # COMPACT TOP HEADER CARD DISPLAYING ONLY BOLD ATS SCORE & VERDICT
+        # COMPACT TOP HEADER CARD WITH FLUSH TEXT IN SINGLE LINE & LARGER FONT SCORE
         st.markdown(f"""
         <div class="panel-card" style="display: flex; justify-content: flex-end; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0; padding: 6px 14px; border-radius: 12px; background: #f8fafc;">
-                <div>
-                    <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">ATS Score: <b>{score_val}</b></div>
-                    <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">({verdict_text})</div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 4px 8px;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; white-space: nowrap;">
+                    ATS SCORE: <b>{score_val}</b> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
                 </div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #16a34a;">{score_val} <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">/100</span></div>
+                <div style="font-size: 2.1rem; font-weight: 800; color: #16a34a; line-height: 1;">
+                    {score_val} <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">/100</span>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
