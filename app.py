@@ -196,7 +196,7 @@ if st.session_state['page'] == 'landing':
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### Workflow Architecture")
+    st.markdown("### How Do We Optimize Your Resume?")
     f1, f2, f3, f4 = st.columns(4)
     with f1:
         st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
