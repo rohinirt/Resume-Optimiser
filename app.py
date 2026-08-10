@@ -47,58 +47,6 @@ st.markdown("""
         background-color: #f8fafc !important;
         color: #0f172a !important;
     }
-    
-    .hero-container {
-        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-        padding: 48px;
-        border-radius: 20px;
-        color: #0f172a;
-        margin-bottom: 32px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03);
-        text-align: center;
-    }
-    
-    .hero-title {
-        font-size: 3rem;
-        font-weight: 800;
-        letter-spacing: -1px;
-        margin-bottom: 12px;
-        color: #0f172a;
-    }
-
-    .hero-subtitle {
-        color: #64748b;
-        font-size: 1.1rem;
-        max-width: 750px;
-        margin: 0 auto;
-        line-height: 1.5;
-    }
-
-    .upload-section-wrapper {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        padding: 32px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        margin-bottom: 30px;
-    }
-
-    .feature-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    }
-    
-    .feature-title {
-        color: #2563eb;
-        font-weight: 700;
-        font-size: 1.05rem;
-        margin-bottom: 8px;
-    }
 
     .tag-green {
         background-color: #dcfce7;
@@ -127,7 +75,7 @@ st.markdown("""
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        padding: 7px 14px;
+        padding: 16px 20px;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
@@ -154,30 +102,36 @@ st.markdown("""
 
 # PAGE 1: LANDING PAGE
 if st.session_state['page'] == 'landing':
+    # TOP NAVBAR HEADER: LOGO ON LEFT WITH SUBTITLE TEXT BELOW
     st.markdown("""
-    <div class="hero-container">
-        <h1 class="hero-title">ResumeTarget</h1>
-        <p class="hero-subtitle">High-Precision ATS Optimization & Executive Resume Tailoring Engine. Built for rigorous algorithmic matching and recruiter impact.</p>
-    </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
+            <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
+            <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
+        </div>
+        <div style="font-size: 0.95rem; color: #64748b; margin-top: 4px; margin-bottom: 24px;">
+            High-Precision ATS Optimization & Executive Resume Tailoring Engine. Built for rigorous algorithmic matching and recruiter impact.
+        </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### Step 1: Provide Source Files & Target Job Description")
-    
-    st.markdown('<div class="upload-section-wrapper">', unsafe_allow_html=True)
+    # UPLOAD SECTION COLUMNS WITH HEADINGS ABOVE EACH BOX
     uc1, uc2, uc3, uc4 = st.columns(4)
     
     with uc1:
-        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume")
+        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
+        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
     with uc2:
-        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp")
+        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
+        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
     with uc3:
-        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj")
+        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
+        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
     with uc4:
-        jd_input = st.text_area("Target Job Description (JD)", height=140, placeholder="Paste job requirements...")
+        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
+        jd_input = st.text_area("Target Job Description (JD)", height=140, placeholder="Paste job requirements...", label_visibility="collapsed")
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    analyze_btn = st.button("Initialize ATS Audit & Tailoring Workspace", type="primary", use_container_width=True)
+    analyze_btn = st.button("Analyse Resume and suggest optimisation", type="primary", use_container_width=True)
 
     if analyze_btn:
         if not uploaded_resume or not jd_input:
@@ -205,18 +159,6 @@ if st.session_state['page'] == 'landing':
                 st.session_state['page'] = 'results'
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### Workflow Architecture")
-    f1, f2, f3, f4 = st.columns(4)
-    with f1:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
-    with f2:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
-    with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
-    with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
 # PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
@@ -305,14 +247,14 @@ elif st.session_state['page'] == 'results':
 
         # COMPACT TOP HEADER CARD WITH CENTER-ALIGNED TEXT AND LARGER FONT SCORE
         st.markdown(f"""
-    <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; width: 100%;">
-            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
-                Overall ATS Score <span style="font-size: 1.6rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
+        <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; width: 100%;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
+                    Overall ATS Score <span style="font-size: 1.6rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
+                </div>
             </div>
         </div>
-    </div>
-""", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
         if active_tab == 'Analysis':
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
