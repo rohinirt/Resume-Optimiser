@@ -24,19 +24,19 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# MODERN MAROON & PINK LUXURY THEME STYLING MATCHING TARGET REFERENCE
+# EXACT CLEAN SAAS THEME MATCHING REFERENCE
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
     }
     
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 2rem !important;
-        max-width: 96% !important;
+        max-width: 98% !important;
     }
     
     header[data-testid="stHeader"] {
@@ -49,53 +49,54 @@ st.markdown("""
     }
     
     .hero-container {
-        background: linear-gradient(135deg, #831843 0%, #500724 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
         padding: 48px;
-        border-radius: 24px;
-        color: #ffffff;
+        border-radius: 20px;
+        color: #0f172a;
         margin-bottom: 32px;
-        box-shadow: 0 20px 40px -15px rgba(131, 24, 67, 0.3);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03);
         text-align: center;
     }
     
     .hero-title {
-        font-size: 3.2rem;
+        font-size: 3rem;
         font-weight: 800;
-        letter-spacing: -1.5px;
+        letter-spacing: -1px;
         margin-bottom: 12px;
-        color: #fff1f2;
+        color: #0f172a;
     }
 
     .hero-subtitle {
-        color: #fbcfe8;
-        font-size: 1.15rem;
+        color: #64748b;
+        font-size: 1.1rem;
         max-width: 750px;
         margin: 0 auto;
-        line-height: 1.6;
+        line-height: 1.5;
     }
 
     .upload-section-wrapper {
         background: #ffffff;
-        border: 2px solid #fbcfe8;
+        border: 1px solid #e2e8f0;
         padding: 32px;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px -5px rgba(131, 24, 67, 0.05);
-        margin-bottom: 35px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        margin-bottom: 30px;
     }
 
     .feature-card {
         background: #ffffff;
-        border: 1px solid #fbcfe8;
-        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
         padding: 24px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(131, 24, 67, 0.04);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
     
     .feature-title {
-        color: #831843;
+        color: #2563eb;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         margin-bottom: 8px;
     }
 
@@ -123,39 +124,35 @@ st.markdown("""
         margin: 3px;
     }
 
-    /* TOP NAVBAR HEADER CARD */
-    .top-navbar {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        padding: 14px 24px;
-        border-radius: 16px;
+    /* TOP NAVBAR PILL TOGGLE CONTAINER */
+    .nav-pill-container {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        width: fit-content;
+        margin: 0 auto;
     }
 
     div.stDownloadButton > button {
         background: #ffffff !important;
-        color: #500724 !important;
+        color: #0f172a !important;
         border: 1px solid #cbd5e1 !important;
-        border-radius: 10px !important;
-        padding: 10px 18px !important;
-        font-weight: 700 !important;
-        font-size: 0.9rem !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
     }
 
     div.stButton > button {
-        background: linear-gradient(135deg, #831843 0%, #500724 100%) !important;
+        background: #2563eb !important;
         color: #ffffff !important;
         border: none !important;
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         padding: 12px 24px !important;
         font-weight: 700 !important;
         font-size: 1rem !important;
-        box-shadow: 0 4px 12px rgba(131, 24, 67, 0.2) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -218,15 +215,15 @@ if st.session_state['page'] == 'landing':
     st.markdown("### Workflow Architecture")
     f1, f2, f3, f4 = st.columns(4)
     with f1:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#881337;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
     with f2:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#881337;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
     with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#881337;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
     with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#881337;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
-# PAGE 2: RESULTS WORKSPACE WITH TOP NAVBAR & TOGGLE
+# PAGE 2: RESULTS WORKSPACE (EXACT 50/50 SPLIT LAYOUT)
 elif st.session_state['page'] == 'results':
     
     res = st.session_state.get('results', {})
@@ -235,24 +232,29 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER MATCHING REFERENCE
-    col_logo, col_tabs, col_dl = st.columns([1.5, 2, 1.2])
+    # TOP NAVBAR HEADER WITH PILL TOGGLE
+    col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
     with col_logo:
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 6px;">
-                <div style="background: linear-gradient(135deg, #831843 0%, #500724 100%); color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
-                <span style="font-size: 1.3rem; font-weight: 800; color: #500724; letter-spacing: -0.5px;">ResumeTarget</span>
+                <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
+                <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
             </div>
         """, unsafe_allow_html=True)
     
-    with col_tabs:
-        t1, t2 = st.columns(2)
-        with t1:
-            if st.button("Analysis", use_container_width=True, key="tab_analysis"):
+    with col_toggle:
+        t_col1, t_col2 = st.columns(2)
+        active = st.session_state.get('active_tab', 'Analysis')
+        with t_col1:
+            bg_a = "#ffffff" if active == 'Analysis' else "transparent"
+            fg_a = "#0f172a" if active == 'Analysis' else "#64748b"
+            if st.button("Analysis", use_container_width=True, key="btn_analysis"):
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
-        with t2:
-            if st.button("Optimized Resume", use_container_width=True, key="tab_optimized"):
+        with t_col2:
+            bg_o = "#ffffff" if active == 'Optimized Resume' else "transparent"
+            fg_o = "#0f172a" if active == 'Optimized Resume' else "#64748b"
+            if st.button("Optimized Resume", use_container_width=True, key="btn_optimized"):
                 st.session_state['active_tab'] = 'Optimized Resume'
                 st.rerun()
 
@@ -268,10 +270,10 @@ elif st.session_state['page'] == 'results':
             use_container_width=True
         )
 
-    st.markdown("<hr style='margin: 10px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
-    # MAIN SPLIT LAYOUT
-    left_col, right_col = st.columns([1.1, 1.9])
+    # EXACT 50 / 50 EQUAL SPLIT LAYOUT
+    left_col, right_col = st.columns([1, 1])
 
     # LEFT SIDE: UPLOADED RESUME INSPECTOR
     with left_col:
@@ -300,64 +302,64 @@ elif st.session_state['page'] == 'results':
         components.html(orig_html, height=880, scrolling=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # RIGHT SIDE: DYNAMIC TAB VIEW (ANALYSIS VS OPTIMIZED RESUME)
+    # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
         active_tab = st.session_state.get('active_tab', 'Analysis')
 
         if active_tab == 'Analysis':
-            # TOP SUMMARY BOX WITH OVERALL ATS SCORE
+            # OVERALL SCORE HEADER BOX
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 22px; border-radius: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                 <div>
-                    <div style="font-weight: 800; font-size: 1.2rem; color: #0f172a;">Analysis & Optimization</div>
-                    <div style="font-size: 0.88rem; color: #64748b; margin-top: 2px;">Review your resume analysis or view the optimized resume.</div>
+                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 16px; border: 1px solid #e2e8f0; padding: 10px 18px; border-radius: 12px; background: #f8fafc;">
+                <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 12px; background: #f8fafc;">
                     <div>
-                        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Overall ATS Score</div>
-                        <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700; margin-top: 2px;">Great Match!</div>
+                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Overall ATS Score</div>
+                        <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">Great Match!</div>
                     </div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: #16a34a;">{overall_score} <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">/100</span></div>
+                    <div style="font-size: 1.7rem; font-weight: 800; color: #16a34a;">{overall_score} <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">/100</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # TWO COLUMN BREAKDOWN GRID (MATCHING REFERENCE IMAGE)
-            g_col1, g_col2 = st.columns(2)
+            # SUB-GRID: MATCHING SKILLS & MATCH BREAKDOWN (SEPARATE BOXES)
+            sub_c1, sub_c2 = st.columns(2)
 
-            with g_col1:
-                # Top Matching Skills Box
-                matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio'])
-                tags_html = "".join([f'<span class="tag-green">&#10003; {k}</span>' for k in matching_kws[:10]])
+            with sub_c1:
+                # MATCHING SKILLS (SHOWING ALL MATCHED)
+                matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
+                tags_html = "".join([f'<span class="tag-green">&#10003; {k}</span>' for k in matching_kws])
                 st.markdown(f"""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; min-height: 220px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span style="font-weight: 700; font-size: 1rem; color: #0f172a;">Top Matching Skills</span>
-                        <span style="background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">{len(matching_kws)} Matched</span>
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 230px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
+                        <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
                     </div>
-                    <div style="margin-top: 10px;">{tags_html}</div>
+                    <div style="max-height: 160px; overflow-y: auto;">{tags_html}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Missing Important Skills Box
-                missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'BigQuery', 'Looker', 'A/B Testing'])
+                # MISSING IMPORTANT SKILLS
+                missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
                 missing_tags = "".join([f'<span class="tag-red">&#10005; {k}</span>' for k in missing_kws])
                 st.markdown(f"""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; min-height: 200px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span style="font-weight: 700; font-size: 1rem; color: #0f172a;">Missing Important Skills</span>
-                        <span style="background: #fee2e2; color: #b91c1c; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">{len(missing_kws)} Missing</span>
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 170px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
+                        <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
                     </div>
-                    <div style="margin-top: 10px;">{missing_tags}</div>
+                    <div>{missing_tags}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            with g_col2:
-                # Match Breakdown Box
+            with sub_c2:
+                # MATCH BREAKDOWN BOX (SEPARATE CONTAINER)
                 st.markdown("""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; min-height: 220px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                    <div style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 16px;">Match Breakdown</div>
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 428px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
                 """, unsafe_allow_html=True)
                 
                 breakdown_metrics = [
@@ -372,33 +374,23 @@ elif st.session_state['page'] == 'results':
                     st.progress(val)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # AI Suggestions Box
-                st.markdown("""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; min-height: 200px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                    <div style="font-weight: 700; font-size: 1rem; color: #0f172a; margin-bottom: 12px;">AI Suggestions <span style="font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 6px;">Beta</span></div>
-                    <div style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin-bottom: 8px;">- Add quantifiable percentages and metrics to experience bullets.</div>
-                    <div style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin-bottom: 8px;">- Integrate missing technical skills directly into competencies.</div>
-                    <div style="font-size: 0.85rem; color: #475569; line-height: 1.5;">- Ensure layout geometry strictly aligns with A4 page constraints.</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # COMBINED JOB COMPATIBILITY & ALIGNMENT STRATEGY SECTION
+            # JOB COMPATIBILITY AND ALIGNMENT STRATEGY SECTION (BULLET FORMAT)
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                <div style="font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
-                <div style="font-size: 0.9rem; color: #334155; line-height: 1.6; margin-bottom: 14px;">
-                    <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation with direct domain experience matching core technical requirements.')}
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
+                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
+                    <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation matching core technical requirements.')}
                 </div>
-                <div style="font-size: 0.9rem; color: #334155; line-height: 1.6; margin-bottom: 14px;">
-                    <strong>Gaps & Missing Elements:</strong> {fitness.get('gaps_and_missing_elements', 'Minor gaps in secondary cloud pipelines and advanced dashboard configuration.')}
+                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 12px;">
+                    <strong>Gaps & Missing Elements:</strong> {fitness.get('gaps_and_missing_elements', 'Minor gaps in advanced secondary cloud workflows.')}
                 </div>
-                <div style="font-weight: 700; font-size: 0.95_rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
-                <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: #475569; line-height: 1.6;">
+                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #475569; line-height: 1.5;">
             """, unsafe_allow_html=True)
             
             strat_points = fitness.get('alignment_strategy', [
-                "Highlight automated ETL data processing pipelines and record scale to demonstrate senior execution capability.",
-                "Position technical competencies upfront to capture immediate ATS keyword weighting.",
+                "Highlight automated ETL data processing pipelines and record scale.",
+                "Position technical competencies upfront for immediate ATS keyword weighting.",
                 "Ensure bullet points strictly adhere to the Google XYZ impact formula."
             ])
             for strat in strat_points:
@@ -408,10 +400,10 @@ elif st.session_state['page'] == 'results':
         else:
             # OPTIMIZED RESUME PREVIEW TAB
             st.markdown("""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
                 <div>
-                    <div style="font-weight: 800; font-size: 1.2rem; color: #0f172a;">Optimized Resume Preview</div>
-                    <div style="font-size: 0.88rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
+                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
