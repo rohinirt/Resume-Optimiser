@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING MATCHING REFERENCE IMAGES
+# EXACT SAAS STYLING MATCHING REFERENCE WITH BLUE THEME TOGGLE & CLEAN BORDERS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -124,13 +124,20 @@ st.markdown("""
         margin: 3px;
     }
 
+    /* OUTER PANEL CONTAINERS WITH VISIBLE SOLID BORDER */
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
         padding: 24px;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        height: 100%;
+        margin-bottom: 18px;
+    }
+
+    /* FORCE BLUE THEME ON STREAMLIT SEGMENTED CONTROL */
+    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
     }
 
     div.stDownloadButton > button {
@@ -230,7 +237,7 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH NATIVE SEGMENTED CONTROL
+    # TOP NAVBAR HEADER: LOGO + SEGMENTED CONTROL + DOWNLOAD BUTTON (NO ICONS, RENAMED)
     col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
     with col_logo:
         st.markdown("""
@@ -256,7 +263,7 @@ elif st.session_state['page'] == 'results':
         updated_docx = generate_new_formatted_docx(res)
         filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
         st.download_button(
-            label="⬇️ Download Analysis Report",
+            label="Download",
             data=updated_docx,
             file_name=filename,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -273,7 +280,8 @@ elif st.session_state['page'] == 'results':
     with left_col:
         st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         
-        hdr_l1, hdr_l2 = st.columns([2, 1])
+        # PROPERLY ALIGNED UPLOADED RESUME HEADER & CHANGE FILE BUTTON IN SAME ROW
+        hdr_l1, hdr_l2 = st.columns([2.2, 1])
         with hdr_l1:
             st.markdown(f"""
                 <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
@@ -303,7 +311,7 @@ elif st.session_state['page'] == 'results':
         if active_tab == 'Analysis':
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
-            <div class="panel-card" style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
@@ -324,7 +332,7 @@ elif st.session_state['page'] == 'results':
                 matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
                 tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
                 st.markdown(f"""
-                <div class="panel-card" style="min-height: 230px; margin-bottom: 18px;">
+                <div class="panel-card" style="min-height: 230px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
                         <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
@@ -336,7 +344,7 @@ elif st.session_state['page'] == 'results':
                 missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
                 missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
                 st.markdown(f"""
-                <div class="panel-card" style="min-height: 170px; margin-bottom: 18px;">
+                <div class="panel-card" style="min-height: 170px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
                         <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
@@ -346,8 +354,9 @@ elif st.session_state['page'] == 'results':
                 """, unsafe_allow_html=True)
 
             with sub_c2:
+                # PROPERLY ALIGNED MATCH BREAKDOWN CONTAINER
                 st.markdown("""
-                <div class="panel-card" style="min-height: 428px; margin-bottom: 18px;">
+                <div class="panel-card" style="min-height: 428px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
                 """, unsafe_allow_html=True)
                 
@@ -364,7 +373,7 @@ elif st.session_state['page'] == 'results':
                 st.markdown("</div>", unsafe_allow_html=True)
 
             st.markdown(f"""
-            <div class="panel-card" style="margin-bottom: 18px;">
+            <div class="panel-card">
                 <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
                 <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
                     <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation matching core technical requirements.')}
@@ -387,7 +396,7 @@ elif st.session_state['page'] == 'results':
 
         else:
             st.markdown("""
-            <div class="panel-card" style="margin-bottom: 18px;">
+            <div class="panel-card">
                 <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
             </div>
