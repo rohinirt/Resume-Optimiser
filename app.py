@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING MATCHING REFERENCE WITH BLUE THEME TOGGLE & CLEAN BORDERS
+# EXACT SAAS STYLING WITH CUSTOM BLUE TOGGLE PILLS & CLEAN BORDERS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -134,12 +134,6 @@ st.markdown("""
         margin-bottom: 18px;
     }
 
-    /* FORCE BLUE THEME ON STREAMLIT SEGMENTED CONTROL */
-    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-    }
-
     div.stDownloadButton > button {
         background: #ffffff !important;
         color: #0f172a !important;
@@ -237,8 +231,8 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER: LOGO + SEGMENTED CONTROL + DOWNLOAD BUTTON (NO ICONS, RENAMED)
-    col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
+    # TOP NAVBAR HEADER: LOGO + THEME BLUE TOGGLE BUTTONS + DOWNLOAD BUTTON
+    col_logo, col_toggle1, col_toggle2, col_dl = st.columns([1.2, 1.1, 1.1, 1.2])
     with col_logo:
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 6px;">
@@ -247,16 +241,23 @@ elif st.session_state['page'] == 'results':
             </div>
         """, unsafe_allow_html=True)
     
-    with col_toggle:
-        selected_tab = st.segmented_control(
-            "View Mode",
-            options=["Analysis", "Optimized Resume"],
-            default=st.session_state.get('active_tab', 'Analysis'),
-            label_visibility="collapsed",
-            key="view_segmented_control"
-        )
-        if selected_tab and selected_tab != st.session_state['active_tab']:
-            st.session_state['active_tab'] = selected_tab
+    active_tab = st.session_state.get('active_tab', 'Analysis')
+    
+    with col_toggle1:
+        is_analysis = (active_tab == 'Analysis')
+        btn_bg = "#2563eb" if is_analysis else "#ffffff"
+        btn_fg = "#ffffff" if is_analysis else "#0f172a"
+        btn_border = "none" if is_analysis else "1px solid #cbd5e1"
+        if st.button("Analysis", use_container_width=True, key="btn_tab_analysis"):
+            st.session_state['active_tab'] = 'Analysis'
+            st.rerun()
+
+    with col_toggle2:
+        is_opt = (active_tab == 'Optimized Resume')
+        opt_bg = "#2563eb" if is_opt else "#ffffff"
+        opt_fg = "#ffffff" if is_opt else "#0f172a"
+        if st.button("Optimized Resume", use_container_width=True, key="btn_tab_optimized"):
+            st.session_state['active_tab'] = 'Optimized Resume'
             st.rerun()
 
     with col_dl:
@@ -306,8 +307,6 @@ elif st.session_state['page'] == 'results':
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
-        active_tab = st.session_state.get('active_tab', 'Analysis')
-
         if active_tab == 'Analysis':
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
