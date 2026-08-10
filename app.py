@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH NATIVE SEGMENTED CONTROL STYLING FOR BLUE ACTIVE STATE
+# EXACT SAAS STYLING WITH ALIGNED RIGHT CONTROLS & CLEAN CARDS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -132,43 +132,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
     }
-
-    /* FORCE BLUE THEME ON NATIVE STREAMLIT SEGMENTED CONTROL */
-    div[data-testid="stSegmentedControl"] {
-        background-color: #f1f5f9;
-        padding: 4px;
-        border-radius: 12px;
-        border: 1px solid #cbd5e1;
-    }
-    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stSegmentedControl"] button[aria-selected="false"] {
-        background-color: transparent !important;
-        color: #0f172a !important;
-    }
-
-    div.stDownloadButton > button {
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 8px 16px !important;
-        font-weight: 600 !important;
-        font-size: 0.88rem !important;
-    }
-
-    div.stButton > button {
-        background: #2563eb !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 8px 16px !important;
-        font-weight: 600 !important;
-        font-size: 0.88rem !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -247,8 +210,11 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH NATIVE SEGMENTED CONTROL & DOWNLOAD BUTTON
-    col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
+    active_tab = st.session_state.get('active_tab', 'Analysis')
+
+    # TOP NAVBAR HEADER: LOGO ON LEFT, TOGGLE & DOWNLOAD BUTTON ALIGNED ABOVE RIGHT SECTION
+    col_logo, col_spacer, col_b1, col_b2, col_b3 = st.columns([1.2, 1.3, 0.7, 0.8, 0.7])
+    
     with col_logo:
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 6px;">
@@ -256,20 +222,28 @@ elif st.session_state['page'] == 'results':
                 <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
             </div>
         """, unsafe_allow_html=True)
-    
-    with col_toggle:
-        selected_tab = st.segmented_control(
-            "View Mode",
-            options=["Analysis", "Optimized Resume"],
-            default=st.session_state.get('active_tab', 'Analysis'),
-            label_visibility="collapsed",
-            key="view_segmented_control"
-        )
-        if selected_tab and selected_tab != st.session_state['active_tab']:
-            st.session_state['active_tab'] = selected_tab
+
+    with col_b1:
+        is_analysis = (active_tab == 'Analysis')
+        bg_a = "#2563eb" if is_analysis else "#ffffff"
+        fg_a = "#ffffff" if is_analysis else "#2563eb"
+        border_a = "none" if is_analysis else "1px solid #2563eb"
+        
+        if st.button("Analysis", use_container_width=True, key="btn_col_analysis"):
+            st.session_state['active_tab'] = 'Analysis'
             st.rerun()
 
-    with col_dl:
+    with col_b2:
+        is_opt = (active_tab == 'Optimized Resume')
+        bg_o = "#2563eb" if is_opt else "#ffffff"
+        fg_o = "#ffffff" if is_opt else "#2563eb"
+        border_o = "none" if is_opt else "1px solid #2563eb"
+        
+        if st.button("Optimized", use_container_width=True, key="btn_col_optimized"):
+            st.session_state['active_tab'] = 'Optimized Resume'
+            st.rerun()
+
+    with col_b3:
         updated_docx = generate_new_formatted_docx(res)
         filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
         st.download_button(
@@ -280,6 +254,39 @@ elif st.session_state['page'] == 'results':
             key="download_report",
             use_container_width=True
         )
+
+    # DYNAMIC INLINE STYLING FOR BUTTON STATES
+    st.markdown(f"""
+    <style>
+        div[data-testid="column"]:nth-of-type(3) div[data-testid="stButton"] button {{
+            background: {bg_a} !important;
+            color: {fg_a} !important;
+            border: {border_a} !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            padding: 6px 10px !important;
+        }}
+        div[data-testid="column"]:nth-of-type(4) div[data-testid="stButton"] button {{
+            background: {bg_o} !important;
+            color: {fg_o} !important;
+            border: {border_o} !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            padding: 6px 10px !important;
+        }}
+        div[data-testid="column"]:nth-of-type(5) div.stDownloadButton > button {{
+            background: #ffffff !important;
+            color: #2563eb !important;
+            border: 1px solid #2563eb !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            padding: 6px 10px !important;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
@@ -315,8 +322,6 @@ elif st.session_state['page'] == 'results':
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
-        active_tab = st.session_state.get('active_tab', 'Analysis')
-
         if active_tab == 'Analysis':
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
@@ -363,8 +368,9 @@ elif st.session_state['page'] == 'results':
                 """, unsafe_allow_html=True)
 
             with sub_c2:
+                # MATCH BREAKDOWN CONTAINER REMOVED CARD BACKGROUND, DIRECTLY PLACING TITLE & PROGRESS BARS
                 st.markdown("""
-                <div class="panel-card" style="min-height: 428px;">
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); min-height: 428px; margin-bottom: 18px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
                 """, unsafe_allow_html=True)
                 
@@ -390,7 +396,7 @@ elif st.session_state['page'] == 'results':
                     <strong>Gaps & Missing Elements:</strong> {fitness.get('gaps_and_missing_elements', 'Minor gaps in advanced secondary cloud workflows.')}
                 </div>
                 <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
-                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #475569; line-height: 1.5;">
+                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #64748b; line-height: 1.5;">
             """, unsafe_allow_html=True)
             
             strat_points = fitness.get('alignment_strategy', [
