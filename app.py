@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH CLEAN CARDS & SEGMENTED CONTROL
+# EXACT SAAS STYLING WITH COMPACT PANEL CARD & SEGMENTED CONTROL
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -127,7 +127,7 @@ st.markdown("""
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        padding: 24px;
+        padding: 16px 20px;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
@@ -269,7 +269,7 @@ elif st.session_state['page'] == 'results':
     # EXACT 50 / 50 EQUAL SPLIT LAYOUT
     left_col, right_col = st.columns([1, 1])
 
-    # LEFT SIDE: UPLOADED RESUME INSPECTOR (FLUSH HEADERS WITHOUT PANEL CARD WRAPPER)
+    # LEFT SIDE: UPLOADED RESUME INSPECTOR
     with left_col:
         hdr_l1, hdr_l2 = st.columns([2.2, 1])
         with hdr_l1:
@@ -295,24 +295,32 @@ elif st.session_state['page'] == 'results':
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
+        # Determine score and verdict dynamically based on active tab
         if active_tab == 'Analysis':
-            overall_score = post.get('ats_score', 86)
-            st.markdown(f"""
-            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 12px; background: #f8fafc;">
-                    <div>
-                        <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Overall ATS Score</div>
-                        <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">Great Match!</div>
-                    </div>
-                    <div style="font-size: 1.7rem; font-weight: 800; color: #16a34a;">{overall_score} <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">/100</span></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            score_val = pre.get('ats_score', 78)
+            verdict_text = "Moderate Match" if score_val < 85 else "Great Match!"
+        else:
+            score_val = post.get('ats_score', 93)
+            verdict_text = "Great Match!"
 
+        # COMPACT TOP HEADER CARD WITH REDUCED HEIGHT & BOLD SCORE + VERDICT FORMATTING
+        st.markdown(f"""
+        <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0; padding: 6px 14px; border-radius: 12px; background: #f8fafc;">
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;">ATS Score: <b>{score_val}</b></div>
+                    <div style="font-size: 0.75rem; color: #16a34a; font-weight: 700;">({verdict_text})</div>
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: #16a34a;">{score_val} <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">/100</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if active_tab == 'Analysis':
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
             tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
             st.markdown(f"""
