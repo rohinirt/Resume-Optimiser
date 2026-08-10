@@ -122,6 +122,7 @@ st.markdown("""
         padding: 3px;
         border-radius: 10px;
         border: 1px solid #cbd5e1;
+        width: 100%;
     }
     div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
         background-color: #2563eb !important;
@@ -196,7 +197,7 @@ if st.session_state['page'] == 'landing':
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### How Do We Optimize Your Resume?")
+    st.markdown("### What Does This Engine Do?")
     f1, f2, f3, f4 = st.columns(4)
     with f1:
         st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
@@ -218,28 +219,16 @@ elif st.session_state['page'] == 'results':
 
     active_tab = st.session_state.get('active_tab', 'Analysis')
 
-    # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
-    col_logo, col_toggle, col_dl = st.columns([2.5, 2.0, 1.2])
+    # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, DOWNLOAD BUTTON ALIGNED ON RIGHT
+    col_logo, col_dl = st.columns([3.5, 1.0])
     
     with col_logo:
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
-                <div style="background: #2563eb; color: #fff; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
+                <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
                 <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
             </div>
         """, unsafe_allow_html=True)
-
-    with col_toggle:
-        selected_tab = st.segmented_control(
-            "View Mode",
-            options=["Analysis", "Optimized Resume"],
-            default=active_tab,
-            label_visibility="collapsed",
-            key="view_segmented_control"
-        )
-        if selected_tab and selected_tab != active_tab:
-            st.session_state['active_tab'] = selected_tab
-            st.rerun()
 
     with col_dl:
         updated_docx = generate_new_formatted_docx(res)
@@ -292,16 +281,32 @@ elif st.session_state['page'] == 'results':
             score_val = post.get('ats_score', 93)
             verdict_text = "Great Match!"
 
-        # COMPACT TOP HEADER CARD WITH CENTER-ALIGNED TEXT AND LARGER FONT SCORE
-        st.markdown(f"""
-        <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; width: 100%;">
-                <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
-                    Overall ATS Score <span style="font-size: 1.6rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
+        # CARD CONTAINER SPLIT 50/50: SEGMENTED BUTTON ON LEFT, ATS SCORE ON RIGHT
+        st.markdown('<div class="panel-card" style="padding: 12px 16px;">', unsafe_allow_html=True)
+        top_card_c1, top_card_c2 = st.columns([1, 1])
+
+        with top_card_c1:
+            selected_tab = st.segmented_control(
+                "View Mode",
+                options=["Analysis", "Optimized Resume"],
+                default=active_tab,
+                label_visibility="collapsed",
+                key="view_segmented_control"
+            )
+            if selected_tab and selected_tab != active_tab:
+                st.session_state['active_tab'] = selected_tab
+                st.rerun()
+
+        with top_card_c2:
+            st.markdown(f"""
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; height: 100%;">
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
+                        Overall ATS Score <span style="font-size: 1.5rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700; font-size: 0.95rem;">({verdict_text})</span>
+                    </div>
                 </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if active_tab == 'Analysis':
             matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
