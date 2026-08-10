@@ -303,10 +303,10 @@ elif st.session_state['page'] == 'results':
             score_val = post.get('ats_score', 93)
             verdict_text = "Great Match!"
 
-        # COMPACT TOP HEADER CARD WITH FLUSH TEXT IN SINGLE LINE & LARGER FONT SCORE
+        # COMPACT TOP HEADER CARD WITH CENTER-ALIGNED TEXT AND LARGER FONT SCORE
         st.markdown(f"""
-        <div class="panel-card" style="display: flex; justify-content: flex-end; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 14px; padding: 4px 8px;">
+        <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 14px; padding: 4px 8px; width: 100%;">
                 <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; white-space: nowrap;">
                     ATS SCORE: <b>{score_val}</b> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
                 </div>
