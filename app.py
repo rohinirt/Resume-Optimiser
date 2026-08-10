@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT CLEAN SAAS THEME MATCHING REFERENCE
+# EXACT CLEAN SAAS THEME MATCHING REFERENCE IMAGES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -124,17 +124,6 @@ st.markdown("""
         margin: 3px;
     }
 
-    /* TOP NAVBAR PILL TOGGLE CONTAINER */
-    .nav-pill-container {
-        display: flex;
-        background: #f1f5f9;
-        padding: 4px;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        width: fit-content;
-        margin: 0 auto;
-    }
-
     div.stDownloadButton > button {
         background: #ffffff !important;
         color: #0f172a !important;
@@ -150,9 +139,9 @@ st.markdown("""
         color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 12px 24px !important;
+        padding: 10px 20px !important;
         font-weight: 700 !important;
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -232,7 +221,7 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH PILL TOGGLE
+    # TOP NAVBAR HEADER WITH PILL TOGGLE & DOWNLOAD BUTTON
     col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
     with col_logo:
         st.markdown("""
@@ -246,14 +235,10 @@ elif st.session_state['page'] == 'results':
         t_col1, t_col2 = st.columns(2)
         active = st.session_state.get('active_tab', 'Analysis')
         with t_col1:
-            bg_a = "#ffffff" if active == 'Analysis' else "transparent"
-            fg_a = "#0f172a" if active == 'Analysis' else "#64748b"
             if st.button("Analysis", use_container_width=True, key="btn_analysis"):
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
         with t_col2:
-            bg_o = "#ffffff" if active == 'Optimized Resume' else "transparent"
-            fg_o = "#0f172a" if active == 'Optimized Resume' else "#64748b"
             if st.button("Optimized Resume", use_container_width=True, key="btn_optimized"):
                 st.session_state['active_tab'] = 'Optimized Resume'
                 st.rerun()
@@ -272,16 +257,16 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
-    # EXACT 50 / 50 EQUAL SPLIT LAYOUT
+    # EXACT 50 / 50 EQUAL SPLIT LAYOUT WITH COMMON BORDERS
     left_col, right_col = st.columns([1, 1])
 
     # LEFT SIDE: UPLOADED RESUME INSPECTOR
     with left_col:
         st.markdown("""
-        <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
-                    <div style="font-weight: 800; font-size: 1.1rem; color: #0f172a;">Uploaded Resume</div>
+                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">%s</div>
                 </div>
         """ % st.session_state.get('file_name', 'Rohini_Tembhurnikar_Resume.pdf'), unsafe_allow_html=True)
@@ -299,7 +284,7 @@ elif st.session_state['page'] == 'results':
             orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
             orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
             
-        components.html(orig_html, height=880, scrolling=True)
+        components.html(orig_html, height=850, scrolling=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
@@ -409,6 +394,6 @@ elif st.session_state['page'] == 'results':
             """, unsafe_allow_html=True)
 
             paper_html = generate_paper_sheet_tailored_html(res)
-            components.html(paper_html, height=920, scrolling=True)
+            components.html(paper_html, height=880, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
