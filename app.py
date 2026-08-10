@@ -48,6 +48,22 @@ st.markdown("""
         color: #0f172a !important;
     }
 
+    .feature-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    
+    .feature-title {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 8px;
+    }
+
     .tag-green {
         background-color: #dcfce7;
         color: #15803d;
@@ -79,6 +95,15 @@ st.markdown("""
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
+    }
+
+    /* FORCE BLUE THEME BUTTON */
+    div.stButton > button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
     }
 
     /* CUSTOMIZE SEGMENTED CONTROL TO BLUE THEME */
@@ -131,7 +156,7 @@ if st.session_state['page'] == 'landing':
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    analyze_btn = st.button("Analyse Resume and suggest optimisation", type="primary", use_container_width=True)
+    analyze_btn = st.button("Analyse and Optimise your Resume for the Targeted Role", type="primary", use_container_width=True)
 
     if analyze_btn:
         if not uploaded_resume or not jd_input:
@@ -159,6 +184,18 @@ if st.session_state['page'] == 'landing':
                 st.session_state['page'] = 'results'
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Workflow Architecture")
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
+    with f2:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
+    with f3:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
+    with f4:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
 # PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
