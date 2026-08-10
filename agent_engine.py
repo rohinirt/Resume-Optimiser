@@ -52,13 +52,13 @@ Return ONLY a valid JSON object following this exact structure:
 {
   "pre_optimization": {
     "ats_score": 75,
-    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery"],
-    "missing_keywords": ["Snowflake", "A/B Testing", "dbt", "Data Governance", "Product Analytics"]
+    "matching_keywords": [],
+    "missing_keywords": []
   },
   "post_optimization": {
     "ats_score": 95,
-    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery", "ETL Pipelines", "A/B Testing", "SLA Monitoring"],
-    "missing_keywords": ["Snowflake", "dbt"]
+    "matching_keywords": [],
+    "missing_keywords": []
   },
   "audit_categories": {
     "hard_skills": {
