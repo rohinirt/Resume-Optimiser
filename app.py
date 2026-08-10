@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH ALIGNED RIGHT CONTROLS & CLEAN CARDS
+# EXACT SAAS STYLING WITH SEGMENTED CONTROL & CLEAN CARDS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -132,6 +132,23 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
     }
+
+    /* CUSTOMIZE SEGMENTED CONTROL TO BLUE THEME */
+    div[data-testid="stSegmentedControl"] {
+        background-color: #f1f5f9;
+        padding: 3px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+    }
+    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stSegmentedControl"] button[aria-selected="false"] {
+        background-color: transparent !important;
+        color: #0f172a !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -212,8 +229,8 @@ elif st.session_state['page'] == 'results':
 
     active_tab = st.session_state.get('active_tab', 'Analysis')
 
-    # TOP NAVBAR HEADER: LOGO ON LEFT, TOGGLE & DOWNLOAD BUTTON ALIGNED ABOVE RIGHT SECTION
-    col_logo, col_spacer, col_b1, col_b2, col_b3 = st.columns([1.2, 1.3, 0.7, 0.8, 0.7])
+    # TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
+    col_logo, col_spacer, col_toggle, col_dl = st.columns([1.5, 1.2, 1.8, 1.0])
     
     with col_logo:
         st.markdown("""
@@ -223,27 +240,19 @@ elif st.session_state['page'] == 'results':
             </div>
         """, unsafe_allow_html=True)
 
-    with col_b1:
-        is_analysis = (active_tab == 'Analysis')
-        bg_a = "#2563eb" if is_analysis else "#ffffff"
-        fg_a = "#ffffff" if is_analysis else "#2563eb"
-        border_a = "none" if is_analysis else "1px solid #2563eb"
-        
-        if st.button("Analysis", use_container_width=True, key="btn_col_analysis"):
-            st.session_state['active_tab'] = 'Analysis'
+    with col_toggle:
+        selected_tab = st.segmented_control(
+            "View Mode",
+            options=["Analysis", "Optimized Resume"],
+            default=active_tab,
+            label_visibility="collapsed",
+            key="view_segmented_control"
+        )
+        if selected_tab and selected_tab != active_tab:
+            st.session_state['active_tab'] = selected_tab
             st.rerun()
 
-    with col_b2:
-        is_opt = (active_tab == 'Optimized Resume')
-        bg_o = "#2563eb" if is_opt else "#ffffff"
-        fg_o = "#ffffff" if is_opt else "#2563eb"
-        border_o = "none" if is_opt else "1px solid #2563eb"
-        
-        if st.button("Optimized", use_container_width=True, key="btn_col_optimized"):
-            st.session_state['active_tab'] = 'Optimized Resume'
-            st.rerun()
-
-    with col_b3:
+    with col_dl:
         updated_docx = generate_new_formatted_docx(res)
         filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
         st.download_button(
@@ -254,39 +263,6 @@ elif st.session_state['page'] == 'results':
             key="download_report",
             use_container_width=True
         )
-
-    # DYNAMIC INLINE STYLING FOR BUTTON STATES
-    st.markdown(f"""
-    <style>
-        div[data-testid="column"]:nth-of-type(3) div[data-testid="stButton"] button {{
-            background: {bg_a} !important;
-            color: {fg_a} !important;
-            border: {border_a} !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.85rem !important;
-            padding: 6px 10px !important;
-        }}
-        div[data-testid="column"]:nth-of-type(4) div[data-testid="stButton"] button {{
-            background: {bg_o} !important;
-            color: {fg_o} !important;
-            border: {border_o} !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.85rem !important;
-            padding: 6px 10px !important;
-        }}
-        div[data-testid="column"]:nth-of-type(5) div.stDownloadButton > button {{
-            background: #ffffff !important;
-            color: #2563eb !important;
-            border: 1px solid #2563eb !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.85rem !important;
-            padding: 6px 10px !important;
-        }}
-    </style>
-    """, unsafe_allow_html=True)
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
@@ -340,51 +316,30 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
-            sub_c1, sub_c2 = st.columns(2)
-
-            with sub_c1:
-                matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
-                tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
-                st.markdown(f"""
-                <div class="panel-card" style="min-height: 230px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
-                        <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
-                    </div>
-                    <div style="max-height: 160px; overflow-y: auto;">{tags_html}</div>
+            # FULL WIDTH SECTIONS INSTEAD OF TWO COLUMNS (REMOVED MATCH BREAKDOWN CARD/CHART)
+            matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
+            tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
+            st.markdown(f"""
+            <div class="panel-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
+                    <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
                 </div>
-                """, unsafe_allow_html=True)
+                <div style="max-height: 160px; overflow-y: auto;">{tags_html}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
-                missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
-                st.markdown(f"""
-                <div class="panel-card" style="min-height: 170px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
-                        <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
-                    </div>
-                    <div>{missing_tags}</div>
+            missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
+            missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
+            st.markdown(f"""
+            <div class="panel-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
+                    <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
                 </div>
-                """, unsafe_allow_html=True)
-
-            with sub_c2:
-                # MATCH BREAKDOWN CONTAINER REMOVED CARD BACKGROUND, DIRECTLY PLACING TITLE & PROGRESS BARS
-                st.markdown("""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); min-height: 428px; margin-bottom: 18px;">
-                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
-                """, unsafe_allow_html=True)
-                
-                breakdown_metrics = [
-                    ("Skills", audit.get("hard_skills", {}).get("score", 90)),
-                    ("Keywords", 85),
-                    ("Experience", 88),
-                    ("Impact & Metrics", audit.get("impact_metrics", {}).get("score", 75)),
-                    ("Formatting", audit.get("formatting", {}).get("score", 80))
-                ]
-                for label, val in breakdown_metrics:
-                    st.write(f"**{label}** — `{val}%`")
-                    st.progress(val)
-                st.markdown("</div>", unsafe_allow_html=True)
+                <div>{missing_tags}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
             st.markdown(f"""
             <div class="panel-card">
