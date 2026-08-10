@@ -16,9 +16,12 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 
 ### EXHAUSTIVE ANALYSIS & TAILORING RULES:
 1. KEYWORD ANALYSIS:
-   - Extract ALL hard skills, programming languages, databases, visualization tools, cloud platforms, analytical methods (e.g., A/B testing, ETL, data modeling), domain knowledge, and operational KPIs from the JD.
+   - Extract ALL hard skills,technical skills, soft skills, programming languages,Methodologies, databases, visualization tools, cloud platforms, analytical methods (e.g., A/B testing, ETL, data modeling), domain knowledge, and operational KPIs from the JD.
    - Perform a granular side-by-side keyword coverage assessment comparing the JD against the Master Resume and Experience/Project files.
    - Ensure precise, non-hallucinated extraction. Never invent or assume tools not present in the files.
+   Return:
+a. 'matching_keywords': Complete list of keywords present in the uploaded resume that match the JD.
+b. 'missing_keywords': Complete, exhaustive list of ALL keywords required by the JD that are MISSING from the uploaded resume. DO NOT summarize or truncate this list.
 
 2. EXPERIENCE REWRITING (Google XYZ Formula):
    - Analyze both the Master Resume and the Additional Work Experience file.
