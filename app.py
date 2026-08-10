@@ -127,7 +127,7 @@ st.markdown("""
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        padding: 8px 14px;
+        padding: 7px 14px;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
@@ -308,7 +308,7 @@ elif st.session_state['page'] == 'results':
         <div class="panel-card" style="display: flex; justify-content: center; align-items: center; text-align: center;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 14px; padding: 4px 8px; width: 100%;">
                 <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; white-space: nowrap;">
-                    ATS SCORE: <b>{score_val}</b> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
+                    Overall ATS Score <b>{score_val}</b> <span style="color: #16a34a; font-weight: 700;">({verdict_text})</span>
                 </div>
                 <div style="font-size: 2.1rem; font-weight: 800; color: #16a34a; line-height: 1;">
                     {score_val} <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">/100</span>
