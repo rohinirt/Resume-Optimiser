@@ -127,7 +127,7 @@ st.markdown("""
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        padding: 8px 16px;
+        padding: 8px 14px;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         margin-bottom: 18px;
