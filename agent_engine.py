@@ -18,6 +18,7 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 1. KEYWORD ANALYSIS:
    - Extract ALL hard skills, programming languages, databases, visualization tools, cloud platforms, analytical methods (e.g., A/B testing, ETL, data modeling), domain knowledge, and operational KPIs from the JD.
    - Perform a granular side-by-side keyword coverage assessment comparing the JD against the Master Resume and Experience/Project files.
+   - Ensure precise, non-hallucinated extraction. Never invent or assume tools not present in the files.
 
 2. EXPERIENCE REWRITING (Google XYZ Formula):
    - Analyze both the Master Resume and the Additional Work Experience file.
@@ -33,10 +34,13 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - Maintain clean, grouped skill categories matching the structure of the Master Resume (e.g., "Programming & Databases", "Visualization & BI Tools", "Data Engineering & Workflows", "Core Competencies").
    - Remove obsolete or unrequested skills if space needs optimization, and explicitly list missing JD skills that the user does not possess.
 
-5. ZERO HALLUCINATION CONSTRAINT:
+5. UNBIASED ATS SCORING:
+   - Calculate objective pre-optimization and post-optimization ATS scores (0-100) based strictly on true semantic matching, hard skill overlap, metric density, and structural readiness. Do NOT artificially deflate pre-optimization scores below 70 or inflate post-optimization scores unless earned by genuine optimization.
+
+6. ZERO HALLUCINATION CONSTRAINT:
    - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
 
-6. STRICT ONE-PAGE (A4) CONSTRAINT:
+7. STRICT ONE-PAGE (A4) CONSTRAINT:
    - The rewritten resume MUST fit on exactly ONE A4 page. 
    - Keep bullet points concise, impactful, and non-redundant. Prioritize high-impact achievements.
    
@@ -44,7 +48,7 @@ OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
 {
   "pre_optimization": {
-    "ats_score": 60,
+    "ats_score": 75,
     "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery"],
     "missing_keywords": ["Snowflake", "A/B Testing", "dbt", "Data Governance", "Product Analytics"]
   },
@@ -52,6 +56,33 @@ Return ONLY a valid JSON object following this exact structure:
     "ats_score": 95,
     "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery", "ETL Pipelines", "A/B Testing", "SLA Monitoring"],
     "missing_keywords": ["Snowflake", "dbt"]
+  },
+  "audit_categories": {
+    "hard_skills": {
+      "score": 75,
+      "feedback": "Detailed feedback on hard skills and tool matching relative to the JD.",
+      "actionable_fixes": ["Specific keyword adjustment instructions."]
+    },
+    "formatting": {
+      "score": 95,
+      "feedback": "Evaluation of layout cleanliness and parsability.",
+      "actionable_fixes": ["Formatting adjustment instructions if needed."]
+    },
+    "impact_metrics": {
+      "score": 70,
+      "feedback": "Evaluation of Google XYZ metric density in experience bullets.",
+      "actionable_fixes": ["Add quantifiable percentage improvements to experience bullets."]
+    },
+    "length_brevity": {
+      "score": 90,
+      "feedback": "Content density check for single A4 page constraint.",
+      "actionable_fixes": ["Trim line length if necessary."]
+    },
+    "section_completeness": {
+      "score": 100,
+      "feedback": "Verification of contact information, education, and certifications.",
+      "actionable_fixes": ["Keep items up to date."]
+    }
   },
   "fitness_and_strategy": {
     "role_fitness_summary": "Detailed summary of candidate fitness relative to seniority, domain, and core requirements...",
@@ -109,7 +140,6 @@ Return ONLY a valid JSON object following this exact structure:
   "clarifying_questions": []
 }
 """
-
 def analyze_and_optimize_resume(master_resume_text, projects_text, experience_text, jd_text):
     user_input = f"""
     --- JOB DESCRIPTION ---
