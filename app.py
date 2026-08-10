@@ -230,7 +230,7 @@ elif st.session_state['page'] == 'results':
     active_tab = st.session_state.get('active_tab', 'Analysis')
 
     # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
-    col_logo, col_spacer, col_toggle, col_dl = st.columns([1.5, 1.2, 1.8, 1.0])
+    col_logo, col_toggle, col_dl = st.columns([2.5, 2.0, 1.2])
     
     with col_logo:
         st.markdown("""
@@ -269,9 +269,9 @@ elif st.session_state['page'] == 'results':
     # EXACT 50 / 50 EQUAL SPLIT LAYOUT
     left_col, right_col = st.columns([1, 1])
 
-    # LEFT SIDE: UPLOADED RESUME INSPECTOR
+    # LEFT SIDE: UPLOADED RESUME INSPECTOR (REMOVED EXTRA CARD WRAPPER, EMBEDDED DIRECTLY)
     with left_col:
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-card" style="padding-bottom: 12px;">', unsafe_allow_html=True)
         
         hdr_l1, hdr_l2 = st.columns([2.2, 1])
         with hdr_l1:
@@ -283,7 +283,7 @@ elif st.session_state['page'] == 'results':
             if st.button("Change File", on_click=go_to_landing, key="change_file_btn", use_container_width=True):
                 pass
         
-        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
@@ -294,7 +294,6 @@ elif st.session_state['page'] == 'results':
             orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
             
         components.html(orig_html, height=850, scrolling=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
