@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT CLEAN SAAS THEME MATCHING REFERENCE IMAGES
+# EXACT SAAS STYLING MATCHING REFERENCE IMAGES
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -124,6 +124,16 @@ st.markdown("""
         margin: 3px;
     }
 
+    /* OUTER PANEL CONTAINERS WITH BORDER MATCHING REFERENCE */
+    .panel-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        height: 100%;
+    }
+
     div.stDownloadButton > button {
         background: #ffffff !important;
         color: #0f172a !important;
@@ -138,10 +148,10 @@ st.markdown("""
         background: #2563eb !important;
         color: #ffffff !important;
         border: none !important;
-        border-radius: 10px !important;
-        padding: 10px 20px !important;
-        font-weight: 700 !important;
-        font-size: 0.95rem !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -212,7 +222,7 @@ if st.session_state['page'] == 'landing':
     with f4:
         st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
-# PAGE 2: RESULTS WORKSPACE (EXACT 50/50 SPLIT LAYOUT)
+# PAGE 2: RESULTS WORKSPACE (EXACT 50/50 SPLIT LAYOUT WITH PILL TOGGLE)
 elif st.session_state['page'] == 'results':
     
     res = st.session_state.get('results', {})
@@ -221,7 +231,7 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH PILL TOGGLE & DOWNLOAD BUTTON
+    # TOP NAVBAR HEADER WITH PILL TOGGLE MATCHING REFERENCE IMAGE
     col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
     with col_logo:
         st.markdown("""
@@ -232,14 +242,14 @@ elif st.session_state['page'] == 'results':
         """, unsafe_allow_html=True)
     
     with col_toggle:
-        t_col1, t_col2 = st.columns(2)
         active = st.session_state.get('active_tab', 'Analysis')
+        t_col1, t_col2 = st.columns(2)
         with t_col1:
-            if st.button("Analysis", use_container_width=True, key="btn_analysis"):
+            if st.button("📊 Analysis", use_container_width=True, key="btn_analysis"):
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
         with t_col2:
-            if st.button("Optimized Resume", use_container_width=True, key="btn_optimized"):
+            if st.button("📄 Optimized Resume", use_container_width=True, key="btn_optimized"):
                 st.session_state['active_tab'] = 'Optimized Resume'
                 st.rerun()
 
@@ -247,7 +257,7 @@ elif st.session_state['page'] == 'results':
         updated_docx = generate_new_formatted_docx(res)
         filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
         st.download_button(
-            label="Download Analysis Report",
+            label="⬇️ Download Analysis Report",
             data=updated_docx,
             file_name=filename,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -257,24 +267,25 @@ elif st.session_state['page'] == 'results':
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
-    # EXACT 50 / 50 EQUAL SPLIT LAYOUT WITH COMMON BORDERS
+    # EXACT 50 / 50 EQUAL SPLIT LAYOUT
     left_col, right_col = st.columns([1, 1])
 
     # LEFT SIDE: UPLOADED RESUME INSPECTOR
     with left_col:
-        st.markdown("""
-        <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <div>
-                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">%s</div>
-                </div>
-        """ % st.session_state.get('file_name', 'Rohini_Tembhurnikar_Resume.pdf'), unsafe_allow_html=True)
+        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         
-        if st.button("Change File", on_click=go_to_landing, key="change_file_btn"):
-            pass
-            
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Row for Uploaded Resume Header & Change File Button
+        hdr_l1, hdr_l2 = st.columns([2, 1])
+        with hdr_l1:
+            st.markdown(f"""
+                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">{st.session_state.get('file_name', 'Rohini_Tembhurnikar_Resume.pdf')}</div>
+            """, unsafe_allow_html=True)
+        with hdr_l2:
+            if st.button("Change File", on_click=go_to_landing, key="change_file_btn", use_container_width=True):
+                pass
+        
+        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
         
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
@@ -285,7 +296,7 @@ elif st.session_state['page'] == 'results':
             orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
             
         components.html(orig_html, height=850, scrolling=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
@@ -295,7 +306,7 @@ elif st.session_state['page'] == 'results':
             # OVERALL SCORE HEADER BOX
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 22px; border-radius: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+            <div class="panel-card" style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
@@ -310,15 +321,15 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
-            # SUB-GRID: MATCHING SKILLS & MATCH BREAKDOWN (SEPARATE BOXES)
+            # SUB-GRID: MATCHING SKILLS & MATCH BREAKDOWN
             sub_c1, sub_c2 = st.columns(2)
 
             with sub_c1:
-                # MATCHING SKILLS (SHOWING ALL MATCHED)
+                # MATCHING SKILLS (ALL MATCHED)
                 matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
-                tags_html = "".join([f'<span class="tag-green">&#10003; {k}</span>' for k in matching_kws])
+                tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
                 st.markdown(f"""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 230px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                <div class="panel-card" style="min-height: 230px; margin-bottom: 18px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Skills</span>
                         <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
@@ -329,9 +340,9 @@ elif st.session_state['page'] == 'results':
 
                 # MISSING IMPORTANT SKILLS
                 missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
-                missing_tags = "".join([f'<span class="tag-red">&#10005; {k}</span>' for k in missing_kws])
+                missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
                 st.markdown(f"""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 170px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                <div class="panel-card" style="min-height: 170px; margin-bottom: 18px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Important Skills</span>
                         <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
@@ -341,9 +352,9 @@ elif st.session_state['page'] == 'results':
                 """, unsafe_allow_html=True)
 
             with sub_c2:
-                # MATCH BREAKDOWN BOX (SEPARATE CONTAINER)
+                # MATCH BREAKDOWN BOX PROPERLY ALIGNED
                 st.markdown("""
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 18px; border-radius: 16px; min-height: 428px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                <div class="panel-card" style="min-height: 428px; margin-bottom: 18px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
                 """, unsafe_allow_html=True)
                 
@@ -359,9 +370,9 @@ elif st.session_state['page'] == 'results':
                     st.progress(val)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # JOB COMPATIBILITY AND ALIGNMENT STRATEGY SECTION (BULLET FORMAT)
+            # JOB COMPATIBILITY AND ALIGNMENT STRATEGY SECTION
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+            <div class="panel-card" style="margin-bottom: 18px;">
                 <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
                 <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
                     <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation matching core technical requirements.')}
@@ -385,11 +396,9 @@ elif st.session_state['page'] == 'results':
         else:
             # OPTIMIZED RESUME PREVIEW TAB
             st.markdown("""
-            <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 20px; border-radius: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-                <div>
-                    <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
-                </div>
+            <div class="panel-card" style="margin-bottom: 18px;">
+                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
             </div>
             """, unsafe_allow_html=True)
 
