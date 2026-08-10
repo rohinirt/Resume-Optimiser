@@ -24,7 +24,7 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH CLEAN CARDS & SEGMENTED CONTROL
+# EXACT SAAS STYLING WITH UNIFORM HEIGHT FOR ALL 4 INPUT BOXES & LARGER STEP HEADERS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -97,6 +97,16 @@ st.markdown("""
         margin-bottom: 18px;
     }
 
+    /* FORCE UNIFORM HEIGHT ON STREAMLIT TEXT AREA TO MATCH FILE UPLOADERS */
+    div[data-baseweb="textarea"] {
+        height: 124px !important;
+        min-height: 124px !important;
+    }
+    div[data-baseweb="textarea"] textarea {
+        height: 100px !important;
+        max-height: 100px !important;
+    }
+
     /* FORCE BLUE THEME BUTTON */
     div.stButton > button {
         background-color: #2563eb !important;
@@ -138,21 +148,21 @@ if st.session_state['page'] == 'landing':
         </div>
     """, unsafe_allow_html=True)
 
-    # UPLOAD SECTION COLUMNS WITH HEADINGS ABOVE EACH BOX
+    # UPLOAD SECTION COLUMNS WITH LARGER STEP HEADERS ABOVE EACH BOX
     uc1, uc2, uc3, uc4 = st.columns(4)
     
     with uc1:
-        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
         uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
     with uc2:
-        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
         uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
     with uc3:
-        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
         uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
     with uc4:
-        st.markdown("<div style='font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
-        jd_input = st.text_area("Target Job Description (JD)", height=140, placeholder="Paste job requirements...", label_visibility="collapsed")
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
+        jd_input = st.text_area("Target Job Description (JD)", placeholder="Paste job requirements...", label_visibility="collapsed")
     
     st.markdown("<br>", unsafe_allow_html=True)
 
