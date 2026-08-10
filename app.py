@@ -142,10 +142,10 @@ if st.session_state['page'] == 'landing':
     st.markdown("""
         <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
             <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
-            <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
+            <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
         </div>
         <div style="font-size: 0.95rem; color: #64748b; margin-top: 4px; margin-bottom: 24px;">
-            High-Precision ATS Optimization & Executive Resume Tailoring Engine. Built for rigorous algorithmic matching and recruiter impact.
+            Align your resume with the role that matters
         </div>
     """, unsafe_allow_html=True)
 
@@ -226,7 +226,7 @@ elif st.session_state['page'] == 'results':
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
                 <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
-                <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeTarget</span>
+                <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
             </div>
         """, unsafe_allow_html=True)
 
