@@ -18,13 +18,10 @@ st.set_page_config(
 if 'page' not in st.session_state:
     st.session_state['page'] = 'landing'
 
-if 'active_tab' not in st.session_state:
-    st.session_state['active_tab'] = 'Analysis'
-
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH NATIVE SEGMENTED CONTROL STYLING FOR BLUE ACTIVE STATE
+# EXACT SAAS STYLING WITH STREAMLIT TABS STYLED IN BLUE
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -133,21 +130,26 @@ st.markdown("""
         margin-bottom: 18px;
     }
 
-    /* FORCE BLUE THEME ON NATIVE STREAMLIT SEGMENTED CONTROL */
-    div[data-testid="stSegmentedControl"] {
+    /* CUSTOMIZE STREAMLIT TABS TO BLUE THEME */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
         background-color: #f1f5f9;
         padding: 4px;
         border-radius: 12px;
         border: 1px solid #cbd5e1;
     }
-    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+    .stTabs [data-baseweb="tab"] {
+        height: 38px;
+        background-color: transparent;
+        border-radius: 8px;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0 16px;
+    }
+    .stTabs [aria-selected="true"] {
         background-color: #2563eb !important;
         color: #ffffff !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stSegmentedControl"] button[aria-selected="false"] {
-        background-color: transparent !important;
-        color: #0f172a !important;
     }
 
     div.stDownloadButton > button {
@@ -223,7 +225,6 @@ if st.session_state['page'] == 'landing':
 
                 st.session_state['results'] = results
                 st.session_state['page'] = 'results'
-                st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -247,8 +248,8 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH NATIVE SEGMENTED CONTROL & DOWNLOAD BUTTON
-    col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
+    # TOP NAVBAR HEADER: LOGO ON LEFT, TABS & DOWNLOAD BUTTON ALIGNED ON RIGHT
+    col_logo, col_controls = st.columns([1.5, 3.5])
     with col_logo:
         st.markdown("""
             <div style="display: flex; align-items: center; gap: 10px; padding-top: 6px;">
@@ -257,29 +258,22 @@ elif st.session_state['page'] == 'results':
             </div>
         """, unsafe_allow_html=True)
     
-    with col_toggle:
-        selected_tab = st.segmented_control(
-            "View Mode",
-            options=["Analysis", "Optimized Resume"],
-            default=st.session_state.get('active_tab', 'Analysis'),
-            label_visibility="collapsed",
-            key="view_segmented_control"
-        )
-        if selected_tab and selected_tab != st.session_state['active_tab']:
-            st.session_state['active_tab'] = selected_tab
-            st.rerun()
-
-    with col_dl:
-        updated_docx = generate_new_formatted_docx(res)
-        filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
-        st.download_button(
-            label="Download",
-            data=updated_docx,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            key="download_report",
-            use_container_width=True
-        )
+    with col_controls:
+        c_tabs, c_dl = st.columns([2.2, 1.2])
+        with c_tabs:
+            # Native Streamlit Tabs placed right before Download button
+            tab_analysis, tab_optimized = st.tabs(["Analysis", "Optimized Resume"])
+        with c_dl:
+            updated_docx = generate_new_formatted_docx(res)
+            filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
+            st.download_button(
+                label="Download",
+                data=updated_docx,
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="download_report",
+                use_container_width=True
+            )
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
@@ -313,14 +307,12 @@ elif st.session_state['page'] == 'results':
         components.html(orig_html, height=850, scrolling=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
+    # RIGHT SIDE: CONTENT DRIVEN BY ACTIVE TAB
     with right_col:
-        active_tab = st.session_state.get('active_tab', 'Analysis')
-
-        if active_tab == 'Analysis':
+        with tab_analysis:
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
-            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0px;">
                 <div>
                     <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
@@ -402,9 +394,9 @@ elif st.session_state['page'] == 'results':
                 st.markdown(f"<li>{strat}</li>", unsafe_allow_html=True)
             st.markdown("</ul></div>", unsafe_allow_html=True)
 
-        else:
+        with tab_optimized:
             st.markdown("""
-            <div class="panel-card">
+            <div class="panel-card" style="margin-top: 0px;">
                 <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
             </div>
