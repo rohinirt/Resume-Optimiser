@@ -230,7 +230,7 @@ elif st.session_state['page'] == 'results':
     active_tab = st.session_state.get('active_tab', 'Analysis')
 
     # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, SEGMENTED CONTROL & DOWNLOAD BUTTON ALIGNED ON RIGHT
-    col_logo, col_toggle, col_dl = st.columns([2.5, 2.0, 1.2])
+    col_logo, col_spacer, col_toggle, col_dl = st.columns([1.5, 1.2, 1.8, 1.0])
     
     with col_logo:
         st.markdown("""
@@ -340,7 +340,6 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
-            # PROPERLY ENCLOSED STRATEGY CARD CONTAINER SO BULLETS DON'T SPILL OUTSIDE
             strat_points = fitness.get('alignment_strategy', [
                 "Highlight automated ETL data processing pipelines and record scale.",
                 "Position technical competencies upfront for immediate ATS keyword weighting.",
@@ -365,13 +364,6 @@ elif st.session_state['page'] == 'results':
             """, unsafe_allow_html=True)
 
         else:
-            st.markdown("""
-            <div class="panel-card">
-                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
-                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
-            </div>
-            """, unsafe_allow_html=True)
-
             paper_html = generate_paper_sheet_tailored_html(res)
             components.html(paper_html, height=880, scrolling=True)
 
