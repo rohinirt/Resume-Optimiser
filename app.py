@@ -197,16 +197,16 @@ if st.session_state['page'] == 'landing':
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### What Does This Engine Do?")
+    st.markdown("### How we optimise your resume?")
     f1, f2, f3, f4 = st.columns(4)
     with f1:
         st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
     with f2:
         st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
     with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized layout side-by-side.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized Resume side-by-side.</p></div>""", unsafe_allow_html=True)
     with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates optimmised downloadable resume in .docx format.</p></div>""", unsafe_allow_html=True)
 
 # PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
