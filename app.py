@@ -269,10 +269,8 @@ elif st.session_state['page'] == 'results':
     # EXACT 50 / 50 EQUAL SPLIT LAYOUT
     left_col, right_col = st.columns([1, 1])
 
-    # LEFT SIDE: UPLOADED RESUME INSPECTOR (REMOVED EXTRA CARD WRAPPER, EMBEDDED DIRECTLY)
+    # LEFT SIDE: UPLOADED RESUME INSPECTOR (FLUSH HEADERS WITHOUT PANEL CARD WRAPPER)
     with left_col:
-        st.markdown('<div class="panel-card" style="padding-bottom: 12px;">', unsafe_allow_html=True)
-        
         hdr_l1, hdr_l2 = st.columns([2.2, 1])
         with hdr_l1:
             st.markdown(f"""
@@ -283,7 +281,7 @@ elif st.session_state['page'] == 'results':
             if st.button("Change File", on_click=go_to_landing, key="change_file_btn", use_container_width=True):
                 pass
         
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
         
         file_type = st.session_state.get('file_type', 'pdf')
         resume_bytes = st.session_state.get('resume_bytes', b"")
