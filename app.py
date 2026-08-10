@@ -124,7 +124,6 @@ st.markdown("""
         margin: 3px;
     }
 
-    /* OUTER PANEL CONTAINERS WITH BORDER MATCHING REFERENCE */
     .panel-card {
         background: #ffffff;
         border: 1px solid #cbd5e1;
@@ -222,7 +221,7 @@ if st.session_state['page'] == 'landing':
     with f4:
         st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates 1-page A4 formatted .docx documents.</p></div>""", unsafe_allow_html=True)
 
-# PAGE 2: RESULTS WORKSPACE (EXACT 50/50 SPLIT LAYOUT WITH PILL TOGGLE)
+# PAGE 2: RESULTS WORKSPACE
 elif st.session_state['page'] == 'results':
     
     res = st.session_state.get('results', {})
@@ -231,7 +230,7 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    # TOP NAVBAR HEADER WITH PILL TOGGLE MATCHING REFERENCE IMAGE
+    # TOP NAVBAR HEADER WITH NATIVE SEGMENTED CONTROL
     col_logo, col_toggle, col_dl = st.columns([1.2, 2.2, 1.2])
     with col_logo:
         st.markdown("""
@@ -242,16 +241,16 @@ elif st.session_state['page'] == 'results':
         """, unsafe_allow_html=True)
     
     with col_toggle:
-        active = st.session_state.get('active_tab', 'Analysis')
-        t_col1, t_col2 = st.columns(2)
-        with t_col1:
-            if st.button("📊 Analysis", use_container_width=True, key="btn_analysis"):
-                st.session_state['active_tab'] = 'Analysis'
-                st.rerun()
-        with t_col2:
-            if st.button("📄 Optimized Resume", use_container_width=True, key="btn_optimized"):
-                st.session_state['active_tab'] = 'Optimized Resume'
-                st.rerun()
+        selected_tab = st.segmented_control(
+            "View Mode",
+            options=["Analysis", "Optimized Resume"],
+            default=st.session_state.get('active_tab', 'Analysis'),
+            label_visibility="collapsed",
+            key="view_segmented_control"
+        )
+        if selected_tab and selected_tab != st.session_state['active_tab']:
+            st.session_state['active_tab'] = selected_tab
+            st.rerun()
 
     with col_dl:
         updated_docx = generate_new_formatted_docx(res)
@@ -274,7 +273,6 @@ elif st.session_state['page'] == 'results':
     with left_col:
         st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         
-        # Row for Uploaded Resume Header & Change File Button
         hdr_l1, hdr_l2 = st.columns([2, 1])
         with hdr_l1:
             st.markdown(f"""
@@ -303,7 +301,6 @@ elif st.session_state['page'] == 'results':
         active_tab = st.session_state.get('active_tab', 'Analysis')
 
         if active_tab == 'Analysis':
-            # OVERALL SCORE HEADER BOX
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
             <div class="panel-card" style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
@@ -321,11 +318,9 @@ elif st.session_state['page'] == 'results':
             </div>
             """, unsafe_allow_html=True)
 
-            # SUB-GRID: MATCHING SKILLS & MATCH BREAKDOWN
             sub_c1, sub_c2 = st.columns(2)
 
             with sub_c1:
-                # MATCHING SKILLS (ALL MATCHED)
                 matching_kws = post.get('matching_keywords', ['SQL', 'Python', 'Tableau', 'Excel', 'Pandas', 'Power BI', 'Data Analysis', 'Statistics', 'Data Visualization', 'Looker Studio', 'BigQuery', 'ETL Pipelines'])
                 tags_html = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
                 st.markdown(f"""
@@ -338,7 +333,6 @@ elif st.session_state['page'] == 'results':
                 </div>
                 """, unsafe_allow_html=True)
 
-                # MISSING IMPORTANT SKILLS
                 missing_kws = post.get('missing_keywords', ['Machine Learning', 'Data Modeling', 'A/B Testing'])
                 missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
                 st.markdown(f"""
@@ -352,7 +346,6 @@ elif st.session_state['page'] == 'results':
                 """, unsafe_allow_html=True)
 
             with sub_c2:
-                # MATCH BREAKDOWN BOX PROPERLY ALIGNED
                 st.markdown("""
                 <div class="panel-card" style="min-height: 428px; margin-bottom: 18px;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 14px;">Match Breakdown</div>
@@ -370,7 +363,6 @@ elif st.session_state['page'] == 'results':
                     st.progress(val)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # JOB COMPATIBILITY AND ALIGNMENT STRATEGY SECTION
             st.markdown(f"""
             <div class="panel-card" style="margin-bottom: 18px;">
                 <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
@@ -394,7 +386,6 @@ elif st.session_state['page'] == 'results':
             st.markdown("</ul></div>", unsafe_allow_html=True)
 
         else:
-            # OPTIMIZED RESUME PREVIEW TAB
             st.markdown("""
             <div class="panel-card" style="margin-bottom: 18px;">
                 <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
