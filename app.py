@@ -18,13 +18,10 @@ st.set_page_config(
 if 'page' not in st.session_state:
     st.session_state['page'] = 'landing'
 
-if 'active_tab' not in st.session_state:
-    st.session_state['active_tab'] = 'Analysis'
-
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-# EXACT SAAS STYLING WITH TARGETED BUTTON STYLES FOR BLUE ACTIVE & BLUE BORDER INACTIVE
+# EXACT SAAS STYLING WITH STREAMLIT TABS STYLED IN BLUE
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -133,10 +130,42 @@ st.markdown("""
         margin-bottom: 18px;
     }
 
+    /* CUSTOMIZE STREAMLIT TABS TO BLUE THEME */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #f1f5f9;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid #cbd5e1;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 38px;
+        background-color: transparent;
+        border-radius: 8px;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+    }
+
     div.stDownloadButton > button {
         background: #ffffff !important;
         color: #0f172a !important;
         border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
+    }
+
+    div.stButton > button {
+        background: #2563eb !important;
+        color: #ffffff !important;
+        border: none !important;
         border-radius: 8px !important;
         padding: 8px 16px !important;
         font-weight: 600 !important;
@@ -196,7 +225,6 @@ if st.session_state['page'] == 'landing':
 
                 st.session_state['results'] = results
                 st.session_state['page'] = 'results'
-                st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -220,9 +248,7 @@ elif st.session_state['page'] == 'results':
     audit = res.get("audit_categories", {})
     fitness = res.get("fitness_and_strategy", {})
 
-    active_tab = st.session_state.get('active_tab', 'Analysis')
-
-    # TOP NAVBAR HEADER: LOGO ON LEFT, TOGGLE BUTTONS & DOWNLOAD BUTTON ALIGNED ON RIGHT
+    # TOP NAVBAR HEADER: LOGO ON LEFT, TABS & DOWNLOAD BUTTON ALIGNED ON RIGHT
     col_logo, col_controls = st.columns([1.5, 3.5])
     with col_logo:
         st.markdown("""
@@ -233,40 +259,10 @@ elif st.session_state['page'] == 'results':
         """, unsafe_allow_html=True)
     
     with col_controls:
-        c_t1, c_t2, c_dl = st.columns([1, 1, 1.1])
-        
-        with c_t1:
-            is_analysis = (active_tab == 'Analysis')
-            bg_a = "#2563eb" if is_analysis else "#ffffff"
-            fg_a = "#ffffff" if is_analysis else "#2563eb"
-            border_a = "none" if is_analysis else "1px solid #2563eb"
-            
-            if st.button("Analysis", use_container_width=True, key="btn_toggle_analysis"):
-                st.session_state['active_tab'] = 'Analysis'
-                st.rerun()
-            st.markdown(f"""
-                <style>
-                    div[data-testid="stButton"] > button[kind="secondary"][key*="btn_toggle_analysis"], 
-                    button[key*="btn_toggle_analysis"] {{
-                        background: {bg_a} !important;
-                        color: {fg_a} !important;
-                        border: {border_a} !important;
-                        border-radius: 8px !important;
-                        font-weight: 600 !important;
-                    }}
-                </style>
-            """, unsafe_allow_html=True)
-
-        with c_t2:
-            is_opt = (active_tab == 'Optimized Resume')
-            bg_o = "#2563eb" if is_opt else "#ffffff"
-            fg_o = "#ffffff" if is_opt else "#2563eb"
-            border_o = "none" if is_opt else "1px solid #2563eb"
-            
-            if st.button("Optimized Resume", use_container_width=True, key="btn_toggle_optimized"):
-                st.session_state['active_tab'] = 'Optimized Resume'
-                st.rerun()
-
+        c_tabs, c_dl = st.columns([2.2, 1.2])
+        with c_tabs:
+            # Native Streamlit Tabs placed right before Download button
+            tab_analysis, tab_optimized = st.tabs(["Analysis", "Optimized Resume"])
         with c_dl:
             updated_docx = generate_new_formatted_docx(res)
             filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
@@ -278,28 +274,6 @@ elif st.session_state['page'] == 'results':
                 key="download_report",
                 use_container_width=True
             )
-
-    # DYNAMIC BUTTON INLINE STYLING INJECTOR
-    st.markdown(f"""
-    <style>
-        div[data-testid="stButton"] button {{
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-        }}
-        /* Target Analysis Button */
-        div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button {{
-            background: {"#2563eb" if active_tab == 'Analysis' else "#ffffff"} !important;
-            color: {"#ffffff" if active_tab == 'Analysis' else "#2563eb"} !important;
-            border: {"none" if active_tab == 'Analysis' else "1px solid #2563eb"} !important;
-        }}
-        /* Target Optimized Resume Button */
-        div[data-testid="column"]:nth-of-type(3) div[data-testid="stButton"] button {{
-            background: {"#2563eb" if active_tab == 'Optimized Resume' else "#ffffff"} !important;
-            color: {"#ffffff" if active_tab == 'Optimized Resume' else "#2563eb"} !important;
-            border: {"none" if active_tab == 'Optimized Resume' else "1px solid #2563eb"} !important;
-        }}
-    </style>
-    """, unsafe_allow_html=True)
 
     st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
 
@@ -333,12 +307,12 @@ elif st.session_state['page'] == 'results':
         components.html(orig_html, height=850, scrolling=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
+    # RIGHT SIDE: CONTENT DRIVEN BY ACTIVE TAB
     with right_col:
-        if active_tab == 'Analysis':
+        with tab_analysis:
             overall_score = post.get('ats_score', 86)
             st.markdown(f"""
-            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="panel-card" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0px;">
                 <div>
                     <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Analysis & Optimization</div>
                     <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Review your resume analysis against job description requirements.</div>
@@ -420,9 +394,9 @@ elif st.session_state['page'] == 'results':
                 st.markdown(f"<li>{strat}</li>", unsafe_allow_html=True)
             st.markdown("</ul></div>", unsafe_allow_html=True)
 
-        else:
+        with tab_optimized:
             st.markdown("""
-            <div class="panel-card">
+            <div class="panel-card" style="margin-top: 0px;">
                 <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Optimized Resume Preview</div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Fully tailored, executive-formatted A4 document ready for export.</div>
             </div>
