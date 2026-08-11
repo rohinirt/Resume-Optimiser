@@ -342,7 +342,7 @@ def generate_new_formatted_docx(results):
     p_contact.paragraph_format.space_after = Pt(8)
     r_contact = p_contact.add_run(contact.get("details", ""))
     r_contact.font.name = "Arial"
-    r_contact.font.size = Pt(8.5)
+    r_contact.font.size = Pt(9)
     r_contact.font.color.rgb = RGBColor(0, 0, 0)
 
     def add_section_header(title_text):
@@ -400,7 +400,7 @@ def generate_new_formatted_docx(results):
             for part, is_bold in clean_markdown_bold_spans(b.strip()):
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
-                r_b.font.size = Pt(8.8)
+                r_b.font.size = Pt(9)
                 r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
@@ -421,7 +421,7 @@ def generate_new_formatted_docx(results):
             for part, is_bold in clean_markdown_bold_spans(b.strip()):
                 r_b = p_b.add_run(part)
                 r_b.font.name = "Arial"
-                r_b.font.size = Pt(8.8)
+                r_b.font.size = Pt(9)
                 r_b.font.bold = is_bold
                 r_b.font.color.rgb = RGBColor(0, 0, 0)
 
@@ -440,7 +440,7 @@ def generate_new_formatted_docx(results):
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_edu.add_run(f", {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(9)
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         elif "|" in txt:
             parts = txt.split("|", 1)
@@ -451,12 +451,12 @@ def generate_new_formatted_docx(results):
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_edu.add_run(f" | {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(9)
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_deg = p_edu.add_run(txt)
             r_deg.font.name = "Arial"
-            r_deg.font.size = Pt(8.8)
+            r_deg.font.size = Pt(9)
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
 
     add_section_header("CERTIFICATIONS")
@@ -474,7 +474,7 @@ def generate_new_formatted_docx(results):
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_cert.add_run(f", {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(9)
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         elif "|" in txt:
             parts = txt.split("|", 1)
@@ -485,12 +485,12 @@ def generate_new_formatted_docx(results):
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_cert.add_run(f" | {parts[1].strip()}")
             r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(8.8)
+            r_rest.font.size = Pt(9)
             r_rest.font.color.rgb = RGBColor(0, 0, 0)
         else:
             r_cert = p_cert.add_run(txt)
             r_cert.font.name = "Arial"
-            r_cert.font.size = Pt(8.8)
+            r_cert.font.size = Pt(9)
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
 
     doc.save(output)
