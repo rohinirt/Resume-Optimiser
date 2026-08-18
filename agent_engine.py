@@ -52,7 +52,7 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 
 7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
    - The rewritten resume MUST fit on exactly ONE A4 page.
-   - Enforce this budget: maximum 3 bullets per role (each bullet 18-28 words), maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
+   - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
    - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
 
 OUTPUT REQUIREMENTS:
