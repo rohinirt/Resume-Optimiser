@@ -50,10 +50,10 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
    - This constraint takes priority over rules 2 and 3 whenever they would otherwise require inventing a number — see METRIC INTEGRITY RULE.
 
-7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
-   - The rewritten resume MUST fit on exactly ONE A4 page.
-   - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
-   - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
+# 7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
+#    - The rewritten resume MUST fit on exactly ONE A4 page.
+#    - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
+#    - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
