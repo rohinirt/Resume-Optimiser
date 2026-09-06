@@ -174,16 +174,22 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
             "Secrets and redeploy the app."
         )
 
+    # Prefer currently available stable Flash models. The previous version
+    # used Gemini 3.6 first, but the API key has exhausted its 3.6 free-tier
+    # daily request quota. A quota error should NOT be retried repeatedly.
     models_to_try = [
+        "gemini-3.8-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-2.5-flash",
     ]
 
     last_errors = []
 
     for model_name in models_to_try:
-        for attempt in range(3):
+        # One retry is enough for a genuine temporary 503. More retries can
+        # waste quota and make a Streamlit request unnecessarily slow.
+        for attempt in range(2):
             try:
                 response = client.models.generate_content(
                     model=model_name,
@@ -207,17 +213,38 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
             except errors.APIError as e:
                 code = getattr(e, "code", None)
                 message = str(e)
-                last_errors.append(f"{model_name}: HTTP {code} - {message}")
 
-                if code in (429, 500, 502, 503, 504):
-                    if attempt < 2:
-                        time.sleep(2 ** attempt)
+                last_errors.append(
+                    f"{model_name}: HTTP {code} - {message}"
+                )
+
+                # A daily free-tier quota is not fixed by waiting 20 seconds.
+                # Move immediately to another model instead of burning retries.
+                if code == 429:
+                    if "PerDayPerProject" in message or "daily" in message.lower():
+                        break
+
+                    # For short-window rate limits, respect Google's retry
+                    # guidance, but only once.
+                    if attempt == 0:
+                        time.sleep(5)
                         continue
                     break
 
+                # 503 is temporary backend/model demand. Retry once, then
+                # move to the next model.
+                if code in (500, 502, 503, 504):
+                    if attempt == 0:
+                        time.sleep(3)
+                        continue
+                    break
+
+                # Model unavailable to this API project.
                 if code == 404:
                     break
 
+                # Authentication, permission, malformed-request, etc.
+                # should be surfaced immediately.
                 raise Exception(
                     f"Gemini API error for {model_name} "
                     f"(HTTP {code}): {message}"
@@ -226,11 +253,13 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
             except Exception:
                 raise
 
-    diagnostic = "\n".join(last_errors[-9:])
+    diagnostic = "\n".join(last_errors[-8:])
     raise Exception(
-        "Gemini optimization failed for every configured model.\n\n"
-        "This is an API/model availability problem, not a resume-formatting problem.\n\n"
-        f"Details:\n{diagnostic}"
+        "Gemini optimization could not find an available model.\n\n"
+        "Your Gemini API key has exhausted the free-tier daily quota for "
+        "at least one model, while another model may be temporarily busy.\n\n"
+        f"Details:\n{diagnostic}\n\n"
+        "Try again later, or enable Gemini API billing for higher quotas."
     )
 
 
