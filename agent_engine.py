@@ -234,7 +234,7 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
     {projects_text}
     """
 
-    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+    models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite']
 
     try:
         response = _generate_with_fallback(
