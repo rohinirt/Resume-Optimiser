@@ -51,9 +51,23 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - This constraint takes priority over rules 2 and 3 whenever they would otherwise require inventing a number — see METRIC INTEGRITY RULE.
 
 7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
-   - The rewritten resume MUST fit on exactly ONE A4 page.
-   - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
-   - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
+- The rewritten resume MUST fit on exactly ONE A4 page.
+- Do NOT impose an arbitrary 2-bullet limit on professional experience.
+- For each professional experience entry:
+  - Preserve 3-5 strong, JD-relevant bullets when the source material supports them.
+  - Use 2 bullets only when the role genuinely has only 2 distinct, high-value achievements relevant to the JD.
+  - Never remove a distinct, relevant achievement merely to meet an arbitrary bullet count.
+- Each bullet should be concise and ideally 15-30 words.
+- Maximum 2 bullets per selected project.
+- Professional summary: 2-3 sentences, maximum 55 words.
+- Prioritize content in this order when space becomes constrained:
+  1. Most JD-relevant professional experience
+  2. High-impact quantified achievements
+  3. Relevant projects
+  4. Skills
+  5. Education and certifications
+- If the content is too long for one A4 page, shorten wording before deleting relevant experience bullets.
+- Do NOT reduce every experience to two bullets simply to satisfy the page constraint.
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
