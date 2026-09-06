@@ -168,26 +168,86 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
     {projects_text}
     """
 
-    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+    if not api_key:
+        raise Exception(
+            "GEMINI_API_KEY is missing. Add GEMINI_API_KEY to Streamlit Cloud "
+            "Secrets and redeploy the app."
+        )
+
+    # Current supported stable Gemini models.
+    # 1.5 Flash is no longer a valid fallback.
+    models_to_try = [
+        "gemini-3.6-flash",
+        "gemini-2.5-flash",
+        "gemini-3.5-flash",
+    ]
+
+    last_errors = []
 
     for model_name in models_to_try:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=user_input,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    response_mime_type="application/json"
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=user_input,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        response_mime_type="application/json",
+                    ),
                 )
-            )
-            return json.loads(response.text)
-        except errors.APIError as e:
-            if e.code == 503 or e.code == 404:
-                time.sleep(1.5)
-                continue
-            raise e
 
-    raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
+                if not response.text:
+                    raise Exception(f"{model_name} returned an empty response.")
+
+                try:
+                    return json.loads(response.text)
+                except json.JSONDecodeError as e:
+                    raise Exception(
+                        f"{model_name} returned invalid JSON: {e}"
+                    ) from e
+
+            except errors.APIError as e:
+                code = getattr(e, "code", None)
+                message = str(e)
+
+                last_errors.append(
+                    f"{model_name}: HTTP {code} - {message}"
+                )
+
+                # Retry transient service/quota failures.
+                if code in (429, 500, 502, 503, 504):
+                    if attempt < 2:
+                        time.sleep(2 ** attempt)
+                        continue
+                    break
+
+                # 404 means the model/endpoint is unavailable to this
+                # API/project. Retrying it will not fix the problem.
+                if code == 404:
+                    break
+
+                # Surface authentication, permission and invalid-request
+                # errors instead of incorrectly calling them "busy".
+                raise Exception(
+                    f"Gemini API error for {model_name} (HTTP {code}): {message}"
+                ) from e
+
+            except Exception:
+                raise
+
+    diagnostic = "
+".join(last_errors[-9:])
+    raise Exception(
+        "Gemini optimization failed for every configured model.
+
+"
+        "This is an API/model availability problem, not a resume-formatting problem.
+
+"
+        f"Details:
+{diagnostic}"
+    )
+
 
 def fetch_real_web_salary(company_name, job_title):
     """
