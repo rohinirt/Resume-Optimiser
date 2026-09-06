@@ -13,8 +13,7 @@ def _get_status_code(error):
     """
     Defensively pull an HTTP-style status code out of an exception, regardless of
     which google-genai SDK version/exception shape raised it. Tries known attribute
-    names first, then falls back to regex-matching the stringified error (which is
-    how e.g. 'ClientError: 429 RESOURCE_EXHAUSTED. {...}' shows up).
+    names first, then falls back to regex-matching the stringified error.
     """
     for attr in ("code", "status_code", "http_status", "status"):
         val = getattr(error, attr, None)
@@ -40,9 +39,10 @@ def _extract_retry_delay(error, default=2.0):
 def _generate_with_fallback(models_to_try, contents, config, max_retries_per_model=1):
     """
     Try each model in order. On 429 (quota exhausted), 503 (overloaded), 500, or 404
-    (model unavailable), fall back to the next model in the list rather than failing
-    outright. Catches broadly (not just errors.APIError) because different google-genai
-    SDK versions raise different exception classes/shapes for the same HTTP error.
+    (model unavailable/retired), fall back to the next model in the list rather than
+    failing outright. Catches broadly (not just errors.APIError) because different
+    google-genai SDK versions raise different exception classes/shapes for the same
+    HTTP error.
     """
     last_error = None
     for model_name in models_to_try:
@@ -68,8 +68,6 @@ def _generate_with_fallback(models_to_try, contents, config, max_retries_per_mod
                         continue
                     print(f"[agent_engine] giving up on {model_name}, moving to next fallback model")
                     break
-                # Unrecognized error type/status: don't silently swallow it, but do
-                # still try the next model rather than aborting the whole request.
                 print(f"[agent_engine] unrecognized error shape for {model_name}, trying next model anyway")
                 break
     raise last_error or Exception("All configured Gemini models failed.")
@@ -98,6 +96,7 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 3. PROJECT SELECTION:
    - Analyze the Projects File and Master Resume to identify the top 2-3 projects that best mirror the domain, tech stack, and analytical challenges described in the JD.
    - Rewrite project bullet points focusing on quantifiable business outcomes, following the same METRIC INTEGRITY RULE as above — no invented numbers.
+   - LINK INTEGRITY RULE: The Projects File and Master Resume contain hyperlink URLs shown inline in parentheses right after their link text (e.g. "Link (https://github.com/...)"). For each selected project, if such a URL exists for that exact project, copy it VERBATIM into "project_link" and set "project_link_label" to the original link text (e.g. "Link", "GitHub", "Dashboard"). If no URL exists for a chosen project, leave "project_link" as an empty string — never invent, guess, or reuse a URL from a different project.
 
 4. CATEGORIZED SKILLS GROUPING:
    - Maintain clean, grouped skill categories matching the structure of the Master Resume (e.g., "Programming & Databases", "Visualization & BI Tools", "Data Engineering & Workflows", "Core Competencies").
@@ -200,6 +199,8 @@ Return ONLY a valid JSON object following this exact structure:
     "projects": [
       {
         "project_title": "Retail Price Optimization | Python",
+        "project_link": "https://github.com/rohinirt/Python_Projects/tree/main/Case%20Study%3A%20Retail%20Price%20Optimization",
+        "project_link_label": "Link",
         "bullets": [
           "Yielded a **28% average revenue increase** per product by developing a **Random Forest model** in Python to forecast demand and calculate price elasticity."
         ]
@@ -234,6 +235,8 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
     {projects_text}
     """
 
+    # gemini-1.5-flash has been fully retired by Google (404s on all calls);
+    # gemini-2.5-flash is on a deprecation clock. gemini-3.5-flash is GA/stable.
     models_to_try = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite']
 
     try:
@@ -274,7 +277,7 @@ def fetch_real_web_salary(company_name, job_title):
 
     try:
         response = _generate_with_fallback(
-            ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'],
+            ['gemini-3.6-flash', 'gemini-3.5-flash'],
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
