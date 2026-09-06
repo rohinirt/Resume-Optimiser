@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import streamlit as st
@@ -8,47 +9,69 @@ from google.genai import types, errors
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
+def _get_status_code(error):
+    """
+    Defensively pull an HTTP-style status code out of an exception, regardless of
+    which google-genai SDK version/exception shape raised it. Tries known attribute
+    names first, then falls back to regex-matching the stringified error (which is
+    how e.g. 'ClientError: 429 RESOURCE_EXHAUSTED. {...}' shows up).
+    """
+    for attr in ("code", "status_code", "http_status", "status"):
+        val = getattr(error, attr, None)
+        if isinstance(val, int):
+            return val
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+    match = re.search(r"\b(429|503|500|404)\b", str(error))
+    if match:
+        return int(match.group(1))
+    return None
+
 def _extract_retry_delay(error, default=2.0):
-    """Pull Google's suggested retryDelay (e.g. '49s') out of a 429 error body, if present."""
-    try:
-        details = getattr(error, "details", None) or {}
-        for d in details.get("details", []) if isinstance(details, dict) else []:
-            if d.get("@type", "").endswith("RetryInfo"):
-                delay_str = d.get("retryDelay", "")
-                return float(delay_str.rstrip("s")) if delay_str else default
-    except Exception:
-        pass
+    """Pull Google's suggested retryDelay (e.g. '49s') out of the error, if present."""
+    match = re.search(r"retryDelay['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)s", str(error))
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            pass
     return default
 
 def _generate_with_fallback(models_to_try, contents, config, max_retries_per_model=1):
     """
-    Try each model in order. On 429 (quota exhausted) or 503 (overloaded) or 404
-    (model not found/available), fall back to the next model in the list rather
-    than failing outright. Respects the server's suggested retryDelay when given.
+    Try each model in order. On 429 (quota exhausted), 503 (overloaded), 500, or 404
+    (model unavailable), fall back to the next model in the list rather than failing
+    outright. Catches broadly (not just errors.APIError) because different google-genai
+    SDK versions raise different exception classes/shapes for the same HTTP error.
     """
     last_error = None
     for model_name in models_to_try:
         attempts = 0
         while attempts <= max_retries_per_model:
             try:
+                print(f"[agent_engine] attempting model={model_name} (attempt {attempts + 1})")
                 return client.models.generate_content(
                     model=model_name,
                     contents=contents,
                     config=config,
                 )
-            except errors.APIError as e:
+            except Exception as e:
                 last_error = e
-                if e.code in (429, 503, 404):
-                    # 429 = quota exhausted, 503 = overloaded, 404 = model unavailable.
-                    # Give a quota-exhausted model one short wait/retry, then move on
-                    # to the next model in the fallback list rather than looping forever
-                    # on a model whose daily quota is already spent.
+                status = _get_status_code(e)
+                print(f"[agent_engine] model={model_name} failed with status={status}: {e}")
+                if status in (429, 503, 500, 404):
                     if attempts < max_retries_per_model:
-                        time.sleep(_extract_retry_delay(e))
+                        delay = _extract_retry_delay(e)
+                        print(f"[agent_engine] retrying {model_name} after {delay}s")
+                        time.sleep(delay)
                         attempts += 1
                         continue
+                    print(f"[agent_engine] giving up on {model_name}, moving to next fallback model")
                     break
-                raise e
+                # Unrecognized error type/status: don't silently swallow it, but do
+                # still try the next model rather than aborting the whole request.
+                print(f"[agent_engine] unrecognized error shape for {model_name}, trying next model anyway")
+                break
     raise last_error or Exception("All configured Gemini models failed.")
 
 # EXACT ORIGINAL SYSTEM INSTRUCTIONS (UNTOUCHED)
@@ -223,14 +246,15 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
             ),
         )
         return json.loads(response.text)
-    except errors.APIError as e:
-        if e.code == 429:
+    except Exception as e:
+        status = _get_status_code(e)
+        if status == 429:
             raise Exception(
                 "All available Gemini models have hit their request quota for now "
                 "(free-tier daily limit reached). Please try again later, or upgrade "
                 "your Google AI Studio plan for higher limits."
             )
-        raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
+        raise Exception(f"Google AI models are currently busy or unavailable. Please try again in a few moments. (details: {e})")
 
 def fetch_real_web_salary(company_name, job_title):
     """
