@@ -50,24 +50,10 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
    - This constraint takes priority over rules 2 and 3 whenever they would otherwise require inventing a number — see METRIC INTEGRITY RULE.
 
-7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
-- The rewritten resume MUST fit on exactly ONE A4 page.
-- Do NOT impose an arbitrary 2-bullet limit on professional experience.
-- For each professional experience entry:
-  - Preserve 3-5 strong, JD-relevant bullets when the source material supports them.
-  - Use 2 bullets only when the role genuinely has only 2 distinct, high-value achievements relevant to the JD.
-  - Never remove a distinct, relevant achievement merely to meet an arbitrary bullet count.
-- Each bullet should be concise and ideally 15-30 words.
-- Maximum 2 bullets per selected project.
-- Professional summary: 2-3 sentences, maximum 55 words.
-- Prioritize content in this order when space becomes constrained:
-  1. Most JD-relevant professional experience
-  2. High-impact quantified achievements
-  3. Relevant projects
-  4. Skills
-  5. Education and certifications
-- If the content is too long for one A4 page, shorten wording before deleting relevant experience bullets.
-- Do NOT reduce every experience to two bullets simply to satisfy the page constraint.
+# 7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
+#    - The rewritten resume MUST fit on exactly ONE A4 page.
+#    - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
+#    - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
@@ -182,100 +168,26 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
     {projects_text}
     """
 
-    if not api_key:
-        raise Exception(
-            "GEMINI_API_KEY is missing. Add GEMINI_API_KEY to Streamlit Cloud "
-            "Secrets and redeploy the app."
-        )
-
-    # Prefer currently available stable Flash models. The previous version
-    # used Gemini 3.6 first, but the API key has exhausted its 3.6 free-tier
-    # daily request quota. A quota error should NOT be retried repeatedly.
-    models_to_try = [
-        "gemini-3.8-flash",
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.7-flash",
-    ]
-
-    last_errors = []
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
 
     for model_name in models_to_try:
-        # One retry is enough for a genuine temporary 503. More retries can
-        # waste quota and make a Streamlit request unnecessarily slow.
-        for attempt in range(2):
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=user_input,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        response_mime_type="application/json",
-                    ),
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_input,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    response_mime_type="application/json"
                 )
+            )
+            return json.loads(response.text)
+        except errors.APIError as e:
+            if e.code == 503 or e.code == 404:
+                time.sleep(1.5)
+                continue
+            raise e
 
-                if not response.text:
-                    raise Exception(f"{model_name} returned an empty response.")
-
-                try:
-                    return json.loads(response.text)
-                except json.JSONDecodeError as e:
-                    raise Exception(
-                        f"{model_name} returned invalid JSON: {e}"
-                    ) from e
-
-            except errors.APIError as e:
-                code = getattr(e, "code", None)
-                message = str(e)
-
-                last_errors.append(
-                    f"{model_name}: HTTP {code} - {message}"
-                )
-
-                # A daily free-tier quota is not fixed by waiting 20 seconds.
-                # Move immediately to another model instead of burning retries.
-                if code == 429:
-                    if "PerDayPerProject" in message or "daily" in message.lower():
-                        break
-
-                    # For short-window rate limits, respect Google's retry
-                    # guidance, but only once.
-                    if attempt == 0:
-                        time.sleep(5)
-                        continue
-                    break
-
-                # 503 is temporary backend/model demand. Retry once, then
-                # move to the next model.
-                if code in (500, 502, 503, 504):
-                    if attempt == 0:
-                        time.sleep(3)
-                        continue
-                    break
-
-                # Model unavailable to this API project.
-                if code == 404:
-                    break
-
-                # Authentication, permission, malformed-request, etc.
-                # should be surfaced immediately.
-                raise Exception(
-                    f"Gemini API error for {model_name} "
-                    f"(HTTP {code}): {message}"
-                ) from e
-
-            except Exception:
-                raise
-
-    diagnostic = "\n".join(last_errors[-8:])
-    raise Exception(
-        "Gemini optimization could not find an available model.\n\n"
-        "Your Gemini API key has exhausted the free-tier daily quota for "
-        "at least one model, while another model may be temporarily busy.\n\n"
-        f"Details:\n{diagnostic}\n\n"
-        "Try again later, or enable Gemini API billing for higher quotas."
-    )
-
+    raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
 
 def fetch_real_web_salary(company_name, job_title):
     """
