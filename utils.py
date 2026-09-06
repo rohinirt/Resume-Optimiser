@@ -2,7 +2,7 @@ import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import qn, nsdecls
+from docx.oxml.ns import qn
 import base64
 import html
 import re
@@ -38,13 +38,12 @@ def add_bottom_border(paragraph, color_hex="000000", size="12"):
 
 def parse_markdown_formatting(text):
     """
-    Parses both markdown links [Text](URL) and bold text **Text**.
+    Parses markdown links [Text](URL) and bold text **Text**.
     Returns a list of tuples: (content, is_bold, url_or_none)
     """
     if not text:
         return []
     
-    # Combined regex pattern for links and bolding
     pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*')
     tokens = []
     last_idx = 0
@@ -80,9 +79,122 @@ def render_tokens_to_html(text):
             out_html += escaped
     return out_html
 
+def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
+    if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
+        try:
+            doc = docx.Document(BytesIO(content_text_or_bytes))
+            lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        except Exception:
+            lines = []
+    else:
+        lines = [line.strip() for line in str(content_text_or_bytes).split('\n') if line.strip()]
+
+    if not lines:
+        return "<p>No content found.</p>"
+
+    cand_name = html.escape(lines[0])
+    cand_details = render_tokens_to_html(lines[1]) if len(lines) > 1 else ""
+    body_lines = lines[2:] if len(lines) > 2 else lines[1:]
+
+    paragraphs_html = ""
+    current_section = ""
+    in_bullet_list = False
+
+    for txt in body_lines:
+        escaped_txt = html.escape(txt)
+        if txt.isupper() and len(txt) < 40:
+            if in_bullet_list:
+                paragraphs_html += "</ul>"
+                in_bullet_list = False
+            current_section = txt.upper()
+            paragraphs_html += f'<div class="section-title">{escaped_txt}</div>'
+            continue
+
+        is_bullet = txt.startswith("•") or txt.startswith("-") or txt.startswith("*") or (
+            ("EXPERIENCE" in current_section or "PROJECTS" in current_section) and len(txt) > 30 and not any(k in txt for k in ["Jan 2", "Oct 2", "2026", "2025", "2024"])
+        )
+
+        if is_bullet:
+            if not in_bullet_list:
+                paragraphs_html += '<ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
+                in_bullet_list = True
+            clean_bullet = txt.lstrip("•-* ").strip()
+            formatted_bullet = render_tokens_to_html(clean_bullet)
+            paragraphs_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_bullet}</li>'
+        else:
+            if in_bullet_list:
+                paragraphs_html += "</ul>"
+                in_bullet_list = False
+
+            if ":" in txt and ("SKILLS" in current_section or len(txt) < 80):
+                parts = txt.split(":", 1)
+                formatted_line = f'<strong>{html.escape(parts[0])}:</strong>{render_tokens_to_html(parts[1])}'
+                paragraphs_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;">{formatted_line}</div>'
+            elif "EXPERIENCE" in current_section or "PROJECTS" in current_section:
+                formatted_line = render_tokens_to_html(txt)
+                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{formatted_line}</p>'
+            elif "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
+                if "," in txt:
+                    parts = txt.split(",", 1)
+                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {render_tokens_to_html(parts[1].strip())}</div>'
+                else:
+                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{render_tokens_to_html(txt)}</div>'
+            else:
+                formatted_line = render_tokens_to_html(txt)
+                paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{formatted_line}</p>'
+
+    if in_bullet_list:
+        paragraphs_html += "</ul>"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{
+                font-family: 'Calibri', 'Calibri Body', Arial, sans-serif;
+                background-color: #ffffff;
+                color: #000000;
+                margin: 0;
+                padding: 25px;
+            }}
+            .header-name {{
+                font-size: 1.4rem;
+                font-weight: 800;
+                color: #000000;
+                text-align: center;
+                letter-spacing: 0.5px;
+            }}
+            .header-contact {{
+                font-size: 0.85rem;
+                color: #000000;
+                text-align: center;
+                margin-top: 2px;
+                margin-bottom: 14px;
+            }}
+            .section-title {{
+                color: #000000;
+                font-size: 10pt;
+                margin-top: 12px;
+                margin-bottom: 6px;
+                border-bottom: 1.5px solid #000000;
+                padding-bottom: 2px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header-name">{cand_name}</div>
+        <div class="header-contact">{cand_details}</div>
+        {paragraphs_html}
+    </body>
+    </html>
+    """
+
 def generate_paper_sheet_tailored_html(results):
     sec2 = results.get("section_2_tailored_content", {})
-    keywords = results.get("post_optimization", {}).get("matching_keywords", [])
     
     contact = sec2.get("contact_info", {})
     cand_name = html.escape(str(contact.get("name", "ROHINI TEMBHURNIKAR")))
@@ -170,7 +282,7 @@ def generate_paper_sheet_tailored_html(results):
         <div class="section-title">Projects</div>
         <div>{proj_html}</div>
 
-        <!-- SKILLS SECTION PLACED BELOW PROJECTS -->
+        <!-- TECHNICAL SKILLS PLACED BELOW PROJECTS -->
         <div class="section-title">Technical Skills</div>
         <div>{skills_html}</div>
 
@@ -184,9 +296,6 @@ def generate_paper_sheet_tailored_html(results):
     """
 
 def add_hyperlink(paragraph, url, text, font_name="Calibri", font_size=Pt(9)):
-    """
-    Helper function to append an underlined hyperlink into a docx paragraph.
-    """
     part = paragraph.part
     r_id = part.relate_to(url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
 
@@ -262,18 +371,16 @@ def generate_new_formatted_docx(results):
         r.font.name = "Calibri"
         r.font.size = Pt(10)
         r.font.bold = True
-        r.font.color.rgb = RGBColor(0, 0, 0)  # BLACK AND BOLD HEADER
+        r.font.color.rgb = RGBColor(0, 0, 0)
         add_bottom_border(p, color_hex="000000", size="8")
         return p
 
-    # 1. PROFESSIONAL SUMMARY
     add_section_header("PROFESSIONAL SUMMARY")
     p_sum = doc.add_paragraph()
     p_sum.paragraph_format.space_before = Pt(0)
     p_sum.paragraph_format.space_after = Pt(6)
     add_formatted_text_to_paragraph(p_sum, sec2.get("professional_summary", ""), font_size=Pt(9))
 
-    # 2. WORK EXPERIENCE
     add_section_header("WORK EXPERIENCE")
     for role in sec2.get("professional_experience", []):
         p_role = doc.add_paragraph()
@@ -286,7 +393,6 @@ def generate_new_formatted_docx(results):
             p_b.paragraph_format.space_after = Pt(2)
             add_formatted_text_to_paragraph(p_b, b.strip(), font_size=Pt(9))
 
-    # 3. PROJECTS
     add_section_header("PROJECTS")
     for proj in sec2.get("projects", []):
         p_proj = doc.add_paragraph()
@@ -299,7 +405,6 @@ def generate_new_formatted_docx(results):
             p_b.paragraph_format.space_after = Pt(2)
             add_formatted_text_to_paragraph(p_b, b.strip(), font_size=Pt(9))
 
-    # 4. TECHNICAL SKILLS (BELOW PROJECTS)
     add_section_header("TECHNICAL SKILLS")
     for cat, val in sec2.get("core_competencies_grouped", {}).items():
         p_sk = doc.add_paragraph()
@@ -312,7 +417,6 @@ def generate_new_formatted_docx(results):
         r_cat.font.color.rgb = RGBColor(0, 0, 0)
         add_formatted_text_to_paragraph(p_sk, str(val), font_size=Pt(9))
 
-    # 5. EDUCATION
     add_section_header("EDUCATION")
     for edu in sec2.get("education", []):
         p_edu = doc.add_paragraph()
@@ -320,7 +424,6 @@ def generate_new_formatted_docx(results):
         p_edu.paragraph_format.space_after = Pt(2)
         add_formatted_text_to_paragraph(p_edu, str(edu), font_size=Pt(9))
 
-    # 6. CERTIFICATIONS
     add_section_header("CERTIFICATIONS")
     for cert in sec2.get("certifications", []):
         p_cert = doc.add_paragraph()
