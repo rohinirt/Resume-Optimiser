@@ -24,44 +24,6 @@ if 'active_tab' not in st.session_state:
 def go_to_landing():
     st.session_state['page'] = 'landing'
 
-
-# ------------------------------------------------------------
-# PERSIST INPUTS ACROSS PAGE CHANGES
-# ------------------------------------------------------------
-# File uploader widgets are removed from the DOM when the results
-# page is displayed. Keep a separate copy in session_state so the
-# user can return to the landing page without losing inputs.
-def save_resume_upload():
-    file = st.session_state.get('upload_resume')
-    if file:
-        st.session_state['saved_resume_bytes'] = file.getvalue()
-        st.session_state['saved_resume_text'] = extract_text_from_file(file)
-        st.session_state['saved_resume_name'] = file.name
-        st.session_state['saved_resume_type'] = file.name.rsplit('.', 1)[-1].lower()
-
-
-def save_experience_upload():
-    file = st.session_state.get('upload_exp')
-    if file:
-        st.session_state['saved_experience_text'] = extract_text_from_file(file)
-        st.session_state['saved_experience_name'] = file.name
-
-
-def save_projects_upload():
-    file = st.session_state.get('upload_proj')
-    if file:
-        st.session_state['saved_projects_text'] = extract_text_from_file(file)
-        st.session_state['saved_projects_name'] = file.name
-
-
-def save_jd():
-    st.session_state['saved_jd'] = st.session_state.get('jd_input_widget', '')
-
-
-if 'jd_input_widget' not in st.session_state:
-    st.session_state['jd_input_widget'] = st.session_state.get('saved_jd', '')
-
-
 # EXACT SAAS STYLING WITH UNIFORM HEIGHT FOR ALL 4 INPUT BOXES & LARGER STEP HEADERS
 st.markdown("""
 <style>
@@ -192,75 +154,38 @@ if st.session_state['page'] == 'landing':
     
     with uc1:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
-        # if st.session_state.get('saved_resume_name'):
-        #     st.caption(f"Current: {st.session_state['saved_resume_name']}")
-        uploaded_resume = st.file_uploader(
-            "Replace Resume (.pdf / .docx)",
-            type=["pdf", "docx"],
-            key="upload_resume",
-            on_change=save_resume_upload,
-            label_visibility="collapsed"
-        )
-
+        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
     with uc2:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
-        # if st.session_state.get('saved_experience_name'):
-        #     st.caption(f"Current: {st.session_state['saved_experience_name']}")
-        uploaded_experience = st.file_uploader(
-            "Replace Experience File (.pdf / .docx)",
-            type=["pdf", "docx"],
-            key="upload_exp",
-            on_change=save_experience_upload,
-            label_visibility="collapsed"
-        )
-
+        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
     with uc3:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
-        # if st.session_state.get('saved_projects_name'):
-        #     st.caption(f"Current: {st.session_state['saved_projects_name']}")
-        uploaded_projects = st.file_uploader(
-            "Replace Projects Repository (.pdf / .docx)",
-            type=["pdf", "docx"],
-            key="upload_proj",
-            on_change=save_projects_upload,
-            label_visibility="collapsed"
-        )
-
+        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
     with uc4:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
-        jd_input = st.text_area(
-            "Target Job Description (JD)",
-            placeholder="Paste job requirements...",
-            key="jd_input_widget",
-            on_change=save_jd,
-            label_visibility="collapsed"
-        )
+        jd_input = st.text_area("Target Job Description (JD)", placeholder="Paste job requirements...", label_visibility="collapsed")
     
     st.markdown("<br>", unsafe_allow_html=True)
 
     analyze_btn = st.button("Analyse and Optimise your Resume for the Targeted Role", type="primary", use_container_width=True)
 
     if analyze_btn:
-        # Always use the persistent copies. Upload callbacks update them
-        # only when the user actually chooses a replacement file.
-        resume_text = st.session_state.get('saved_resume_text', '')
-        experience_text = st.session_state.get('saved_experience_text', '')
-        projects_text = st.session_state.get('saved_projects_text', '')
-        jd_input = st.session_state.get(
-            'saved_jd',
-            st.session_state.get('jd_input_widget', '')
-        )
-
-        if not resume_text or not jd_input.strip():
+        if not uploaded_resume or not jd_input:
             st.warning("Please upload a Master Resume and paste a Job Description to proceed.")
         else:
             with st.spinner("Executing semantic keyword mapping, gap analysis, and layout generation..."):
-                st.session_state['resume_bytes'] = st.session_state.get('saved_resume_bytes', b"")
-                st.session_state['file_type'] = st.session_state.get('saved_resume_type', 'pdf')
-                st.session_state['file_name'] = st.session_state.get('saved_resume_name', 'Resume.pdf')
-
+                file_bytes = uploaded_resume.read()
+                uploaded_resume.seek(0)
+                st.session_state['resume_bytes'] = file_bytes
+                st.session_state['file_type'] = uploaded_resume.name.split(".")[-1].lower()
+                st.session_state['file_name'] = uploaded_resume.name
+                
+                resume_text = extract_text_from_file(uploaded_resume)
+                experience_text = extract_text_from_file(uploaded_experience) if uploaded_experience else ""
+                projects_text = extract_text_from_file(uploaded_projects) if uploaded_projects else ""
+                
                 results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
-
+                
                 filename_parts = results.get("suggested_filename", "").split("_")
                 company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
                 real_salary = fetch_real_web_salary(company_name, "Data Analyst")
@@ -270,6 +195,7 @@ if st.session_state['page'] == 'landing':
                 st.session_state['page'] = 'results'
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
+
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### How do we optimise your resume?")
     f1, f2, f3, f4 = st.columns(4)
@@ -340,7 +266,7 @@ elif st.session_state['page'] == 'results':
         if file_type == 'docx':
             orig_html = generate_standard_resume_sheet_html("Original Resume", resume_bytes, is_docx_file=True)
         else:
-            orig_text = st.session_state.get('saved_resume_text', '')
+            orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
             orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
             
         components.html(orig_html, height=850, scrolling=True)
@@ -438,6 +364,6 @@ elif st.session_state['page'] == 'results':
 
         else:
             paper_html = generate_paper_sheet_tailored_html(res)
-            components.html(paper_html, height=830, scrolling=True)
+            components.html(paper_html, height=880, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
