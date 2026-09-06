@@ -192,8 +192,8 @@ if st.session_state['page'] == 'landing':
     
     with uc1:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
-        if st.session_state.get('saved_resume_name'):
-            # st.caption(f"Current: {st.session_state['saved_resume_name']}")
+        # if st.session_state.get('saved_resume_name'):
+        #     st.caption(f"Current: {st.session_state['saved_resume_name']}")
         uploaded_resume = st.file_uploader(
             "Replace Resume (.pdf / .docx)",
             type=["pdf", "docx"],
@@ -204,8 +204,8 @@ if st.session_state['page'] == 'landing':
 
     with uc2:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
-        if st.session_state.get('saved_experience_name'):
-            st.caption(f"Current: {st.session_state['saved_experience_name']}")
+        # if st.session_state.get('saved_experience_name'):
+        #     st.caption(f"Current: {st.session_state['saved_experience_name']}")
         uploaded_experience = st.file_uploader(
             "Replace Experience File (.pdf / .docx)",
             type=["pdf", "docx"],
@@ -216,8 +216,8 @@ if st.session_state['page'] == 'landing':
 
     with uc3:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
-        if st.session_state.get('saved_projects_name'):
-            st.caption(f"Current: {st.session_state['saved_projects_name']}")
+        # if st.session_state.get('saved_projects_name'):
+        #     st.caption(f"Current: {st.session_state['saved_projects_name']}")
         uploaded_projects = st.file_uploader(
             "Replace Projects Repository (.pdf / .docx)",
             type=["pdf", "docx"],
