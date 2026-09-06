@@ -269,7 +269,7 @@ elif st.session_state['page'] == 'results':
             orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
             orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
             
-        components.html(orig_html, height=850, scrolling=True)
+        components.html(orig_html, height=830, scrolling=True)
 
     # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
     with right_col:
