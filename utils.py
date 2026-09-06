@@ -1,436 +1,161 @@
-import docx
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import qn
-import base64
-import html
-import re
-from io import BytesIO
-from pypdf import PdfReader
+import os
+import json
+import time
+import streamlit as st
+from google import genai
+from google.genai import types, errors
 
-def extract_text_from_file(uploaded_file):
-    if not uploaded_file:
-        return ""
-    text = ""
-    uploaded_file.seek(0)
-    if uploaded_file.name.endswith(".pdf"):
-        pdf = PdfReader(uploaded_file)
-        for page in pdf.pages:
-            text += (page.extract_text() or "") + "\n"
-    elif uploaded_file.name.endswith(".docx"):
-        doc = docx.Document(uploaded_file)
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-    uploaded_file.seek(0)
-    return text
+api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
 
-def add_bottom_border(paragraph, color_hex="000000", size="12"):
-    pPr = paragraph._p.get_or_add_pPr()
-    pBdr = OxmlElement('w:pBdr')
-    bottom = OxmlElement('w:bottom')
-    bottom.set(qn('w:val'), 'single')
-    bottom.set(qn('w:sz'), size)
-    bottom.set(qn('w:space'), '4')
-    bottom.set(qn('w:color'), color_hex)
-    pBdr.append(bottom)
-    pPr.append(pBdr)
+SYSTEM_INSTRUCTION = """
+You are a Principal Data Analytics Hiring Manager and Elite ATS Optimization Specialist.
 
-def parse_markdown_formatting(text):
+Your task is to conduct an exhaustive analysis of the provided Job Description (JD), Master Resume, Additional Work Experience File, and Projects File, then rewrite and optimize the resume sections to achieve maximum ATS compliance and recruiter impact.
+
+### EXHAUSTIVE ANALYSIS & TAILORING RULES:
+
+1. KEYWORD ANALYSIS:
+   - Extract ALL hard skills, programming languages, databases, visualization tools, cloud platforms, analytical methods (e.g., A/B testing, ETL, data modeling), domain knowledge, and operational KPIs from the JD.
+   - Perform a granular side-by-side keyword coverage assessment comparing the JD against the Master Resume and Experience/Project files.
+   - Ensure precise, non-hallucinated extraction. Never invent or assume tools not present in the files.
+
+2. EXPERIENCE REWRITING (Google XYZ Formula):
+   - Format bullet points strictly using: "Accomplished [X] as measured by [Y] by doing [Z]".
+   - METRIC INTEGRITY RULE: Only include numeric metrics if present in source files.
+   - Use Markdown bold syntax (**text**) around key tools and metrics.
+
+3. PROJECT SELECTION & HYPERLINKS:
+   - Analyze the Projects File and Master Resume to identify top 2-3 relevant projects.
+   - CRITICAL HYPERLINK RULE: Extract and preserve any project links/URLs found in the source files. Format titles with Markdown links where links exist (e.g., "[Retail Price Optimization](https://github.com/example)") so links remain clickable and underlined in outputs.
+
+4. SECTION LAYOUT & ORDER:
+   - Order of resume sections MUST strictly follow:
+     1. Contact Info
+     2. Professional Summary
+     3. Work Experience
+     4. Projects
+     5. Technical Skills  <-- MUST BE DIRECTLY BELOW PROJECTS
+     6. Education
+     7. Certifications
+
+5. ZERO HALLUCINATION CONSTRAINT:
+   - Use ONLY facts, tools, metrics, and experiences present in the provided files.
+
+OUTPUT REQUIREMENTS:
+Return ONLY a valid JSON object following this exact structure:
+{
+  "pre_optimization": {
+    "ats_score": 75,
+    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery"],
+    "partial_matches": ["PostgreSQL (candidate has general SQL experience only)"],
+    "missing_keywords": ["Snowflake", "A/B Testing", "dbt"]
+  },
+  "post_optimization": {
+    "ats_score": 95,
+    "matching_keywords": ["SQL", "Python", "Tableau", "Looker Studio", "BigQuery", "ETL Pipelines", "A/B Testing"],
+    "partial_matches": ["PostgreSQL (candidate has general SQL experience only)"],
+    "missing_keywords": ["Snowflake", "dbt"]
+  },
+  "audit_categories": {
+    "hard_skills": {"score": 75, "feedback": "...", "actionable_fixes": []},
+    "formatting": {"score": 95, "feedback": "...", "actionable_fixes": []},
+    "impact_metrics": {"score": 70, "feedback": "...", "actionable_fixes": []},
+    "length_brevity": {"score": 90, "feedback": "...", "actionable_fixes": []},
+    "section_completeness": {"score": 100, "feedback": "...", "actionable_fixes": []}
+  },
+  "fitness_and_strategy": {
+    "role_fitness_summary": "...",
+    "gaps_and_missing_elements": "...",
+    "alignment_strategy": ["..."]
+  },
+  "summary_of_changes": ["..."],
+  "section_2_tailored_content": {
+    "contact_info": {
+      "name": "ROHINI TEMBHURNIKAR",
+      "details": "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | Hyderabad | [LinkedIn](https://linkedin.com) | [GitHub](https://github.com) | [Portfolio](https://portfolio.com) | [Tableau](https://tableau.com)"
+    },
+    "professional_summary": "...",
+    "professional_experience": [
+      {
+        "role_title": "Data Analytics Specialist, Uber | Hyderabad, Jan 2026 – Aug 2026",
+        "bullets": ["..."]
+      }
+    ],
+    "projects": [
+      {
+        "project_title": "[Retail Price Optimization](https://github.com/example) | Python",
+        "bullets": ["..."]
+      }
+    ],
+    "core_competencies_grouped": {
+      "Programming & Databases": "SQL, BigQuery, Python (Pandas, NumPy)",
+      "Visualization & BI Tools": "Looker Studio, Tableau, Streamlit, Power BI, Excel",
+      "Data Engineering & Workflows": "Automated ETL Pipelines, Query Builder",
+      "Core Competencies": "Data Modelling, Pipeline Troubleshooting, SLA Tracking"
+    },
+    "education": ["..."],
+    "certifications": ["..."]
+  },
+  "suggested_filename": "Candidate_Data_Analyst_TargetCompany",
+  "salary_benchmark": "...",
+  "clarifying_questions": []
+}
+"""
+
+def analyze_and_optimize_resume(master_resume_text, projects_text, experience_text, jd_text):
+    user_input = f"""
+    --- JOB DESCRIPTION ---
+    {jd_text}
+
+    --- MASTER RESUME ---
+    {master_resume_text}
+
+    --- ADDITIONAL WORK EXPERIENCE FILE CONTENT ---
+    {experience_text}
+
+    --- PROJECTS FILE CONTENT ---
+    {projects_text}
     """
-    Parses markdown links [Text](URL) and bold text **Text**.
-    Returns a list of tuples: (content, is_bold, url_or_none)
-    """
-    if not text:
-        return []
-    
-    pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*')
-    tokens = []
-    last_idx = 0
-    
-    for match in pattern.finditer(text):
-        start, end = match.span()
-        if start > last_idx:
-            tokens.append((text[last_idx:start], False, None))
-        
-        link_text, link_url, bold_text = match.groups()
-        if link_text is not None:
-            tokens.append((link_text, False, link_url))
-        elif bold_text is not None:
-            tokens.append((bold_text, True, None))
-            
-        last_idx = end
-        
-    if last_idx < len(text):
-        tokens.append((text[last_idx:], False, None))
-        
-    return tokens
 
-def render_tokens_to_html(text):
-    tokens = parse_markdown_formatting(text)
-    out_html = ""
-    for part, is_bold, url in tokens:
-        escaped = html.escape(part)
-        if url:
-            out_html += f'<a href="{html.escape(url)}" target="_blank" style="color: #0000FF; text-decoration: underline;">{escaped}</a>'
-        elif is_bold:
-            out_html += f'<strong>{escaped}</strong>'
-        else:
-            out_html += escaped
-    return out_html
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
 
-def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
-    if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
+    for model_name in models_to_try:
         try:
-            doc = docx.Document(BytesIO(content_text_or_bytes))
-            lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-        except Exception:
-            lines = []
-    else:
-        lines = [line.strip() for line in str(content_text_or_bytes).split('\n') if line.strip()]
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_input,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    response_mime_type="application/json"
+                )
+            )
+            return json.loads(response.text)
+        except errors.APIError as e:
+            if e.code in (503, 404):
+                time.sleep(1.5)
+                continue
+            raise e
 
-    if not lines:
-        return "<p>No content found.</p>"
+    raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
 
-    cand_name = html.escape(lines[0])
-    cand_details = render_tokens_to_html(lines[1]) if len(lines) > 1 else ""
-    body_lines = lines[2:] if len(lines) > 2 else lines[1:]
-
-    paragraphs_html = ""
-    current_section = ""
-    in_bullet_list = False
-
-    for txt in body_lines:
-        escaped_txt = html.escape(txt)
-        if txt.isupper() and len(txt) < 40:
-            if in_bullet_list:
-                paragraphs_html += "</ul>"
-                in_bullet_list = False
-            current_section = txt.upper()
-            paragraphs_html += f'<div class="section-title">{escaped_txt}</div>'
-            continue
-
-        is_bullet = txt.startswith("•") or txt.startswith("-") or txt.startswith("*") or (
-            ("EXPERIENCE" in current_section or "PROJECTS" in current_section) and len(txt) > 30 and not any(k in txt for k in ["Jan 2", "Oct 2", "2026", "2025", "2024"])
-        )
-
-        if is_bullet:
-            if not in_bullet_list:
-                paragraphs_html += '<ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-                in_bullet_list = True
-            clean_bullet = txt.lstrip("•-* ").strip()
-            formatted_bullet = render_tokens_to_html(clean_bullet)
-            paragraphs_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_bullet}</li>'
-        else:
-            if in_bullet_list:
-                paragraphs_html += "</ul>"
-                in_bullet_list = False
-
-            if ":" in txt and ("SKILLS" in current_section or len(txt) < 80):
-                parts = txt.split(":", 1)
-                formatted_line = f'<strong>{html.escape(parts[0])}:</strong>{render_tokens_to_html(parts[1])}'
-                paragraphs_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;">{formatted_line}</div>'
-            elif "EXPERIENCE" in current_section or "PROJECTS" in current_section:
-                formatted_line = render_tokens_to_html(txt)
-                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{formatted_line}</p>'
-            elif "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
-                if "," in txt:
-                    parts = txt.split(",", 1)
-                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {render_tokens_to_html(parts[1].strip())}</div>'
-                else:
-                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{render_tokens_to_html(txt)}</div>'
-            else:
-                formatted_line = render_tokens_to_html(txt)
-                paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{formatted_line}</p>'
-
-    if in_bullet_list:
-        paragraphs_html += "</ul>"
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: 'Calibri', 'Calibri Body', Arial, sans-serif;
-                background-color: #ffffff;
-                color: #000000;
-                margin: 0;
-                padding: 25px;
-            }}
-            .header-name {{
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: #000000;
-                text-align: center;
-                letter-spacing: 0.5px;
-            }}
-            .header-contact {{
-                font-size: 0.85rem;
-                color: #000000;
-                text-align: center;
-                margin-top: 2px;
-                margin-bottom: 14px;
-            }}
-            .section-title {{
-                color: #000000;
-                font-size: 10pt;
-                margin-top: 12px;
-                margin-bottom: 6px;
-                border-bottom: 1.5px solid #000000;
-                padding-bottom: 2px;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header-name">{cand_name}</div>
-        <div class="header-contact">{cand_details}</div>
-        {paragraphs_html}
-    </body>
-    </html>
+def fetch_real_web_salary(job_title, location):
     """
-
-def generate_paper_sheet_tailored_html(results):
-    sec2 = results.get("section_2_tailored_content", {})
+    Fetches real-time market salary data based on job title and location.
+    """
+    prompt = f"Provide current estimated compensation benchmarks (entry, median, high-end) for the role of '{job_title}' in '{location}'. Keep it brief and return bullet points."
     
-    contact = sec2.get("contact_info", {})
-    cand_name = html.escape(str(contact.get("name", "ROHINI TEMBHURNIKAR")))
-    cand_details = render_tokens_to_html(str(contact.get("details", "")))
-
-    summary = render_tokens_to_html(str(sec2.get("professional_summary", "")))
-    skills_grouped = sec2.get("core_competencies_grouped", {})
-    exp_list = sec2.get("professional_experience", [])
-    proj_list = sec2.get("projects", [])
-    edu_list = sec2.get("education", [])
-    cert_list = sec2.get("certifications", [])
-
-    skills_html = ""
-    for cat, val in skills_grouped.items():
-        skills_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;"><strong>{html.escape(str(cat))}:</strong> <span style="color: #000000;">{render_tokens_to_html(str(val))}</span></div>'
-
-    exp_html = ""
-    for role in exp_list:
-        role_title = render_tokens_to_html(str(role.get("role_title", "")))
-        exp_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{role_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-        for b in role.get("bullets", []):
-            exp_html += f'<li style="margin-bottom: 4px; color: #000000;">{render_tokens_to_html(b)}</li>'
-        exp_html += '</ul>'
-
-    proj_html = ""
-    for proj in proj_list:
-        proj_title = render_tokens_to_html(str(proj.get("project_title", "")))
-        proj_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{proj_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-        for b in proj.get("bullets", []):
-            proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{render_tokens_to_html(b)}</li>'
-        proj_html += '</ul>'
-
-    edu_html = "".join([f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{render_tokens_to_html(str(e))}</div>' for e in edu_list])
-    cert_html = "".join([f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{render_tokens_to_html(str(c))}</div>' for c in cert_list])
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: 'Calibri', 'Calibri Body', Arial, sans-serif;
-                background-color: #ffffff;
-                color: #000000;
-                margin: 0;
-                padding: 25px;
-            }}
-            .header-name {{
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: #000000;
-                text-align: center;
-                letter-spacing: 0.5px;
-            }}
-            .header-contact {{
-                font-size: 0.85rem;
-                color: #000000;
-                text-align: center;
-                margin-top: 2px;
-                margin-bottom: 14px;
-            }}
-            .section-title {{
-                color: #000000;
-                font-size: 10pt;
-                margin-top: 12px;
-                margin-bottom: 6px;
-                border-bottom: 1.5px solid #000000;
-                padding-bottom: 2px;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header-name">{cand_name}</div>
-        <div class="header-contact">{cand_details}</div>
-
-        <div class="section-title">Professional Summary</div>
-        <p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{summary}</p>
-
-        <div class="section-title">Work Experience</div>
-        <div>{exp_html}</div>
-
-        <div class="section-title">Projects</div>
-        <div>{proj_html}</div>
-
-        <!-- TECHNICAL SKILLS PLACED BELOW PROJECTS -->
-        <div class="section-title">Technical Skills</div>
-        <div>{skills_html}</div>
-
-        <div class="section-title">Education</div>
-        <div>{edu_html}</div>
-
-        <div class="section-title">Certifications</div>
-        <div>{cert_html}</div>
-    </body>
-    </html>
-    """
-
-def add_hyperlink(paragraph, url, text, font_name="Calibri", font_size=Pt(9)):
-    part = paragraph.part
-    r_id = part.relate_to(url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
-
-    hyperlink = parse_xml(f'<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" r:id="{r_id}"/>')
-    new_run = parse_xml(f'<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>')
-
-    run_text = parse_xml(f'<w:t xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">{html.escape(text)}</w:t>')
-    new_run.append(run_text)
-
-    rPr = parse_xml(f'<w:rPr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>')
-    color = parse_xml(f'<w:color xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="0000FF"/>')
-    u = parse_xml(f'<w:u xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="single"/>')
-    rPr.append(color)
-    rPr.append(u)
-
-    rFonts = parse_xml(f'<w:rFonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:ascii="{font_name}" w:hAnsi="{font_name}"/>')
-    rPr.append(rFonts)
-
-    sz = parse_xml(f'<w:sz xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="{int(font_size.pt * 2)}"/>')
-    rPr.append(sz)
-
-    new_run.append(rPr)
-    hyperlink.append(new_run)
-    paragraph._p.append(hyperlink)
-
-def add_formatted_text_to_paragraph(paragraph, text, default_font="Calibri", font_size=Pt(9)):
-    tokens = parse_markdown_formatting(text)
-    for part, is_bold, url in tokens:
-        if url:
-            add_hyperlink(paragraph, url, part, font_name=default_font, font_size=font_size)
-        else:
-            r = paragraph.add_run(part)
-            r.font.name = default_font
-            r.font.size = font_size
-            r.font.bold = is_bold
-            r.font.color.rgb = RGBColor(0, 0, 0)
-
-def generate_new_formatted_docx(results):
-    output = BytesIO()
-    doc = docx.Document()
-    sec2 = results.get("section_2_tailored_content", {})
-
-    section = doc.sections[0]
-    section.page_width = Inches(8.5)
-    section.page_height = Inches(11.0)
-    section.top_margin = Inches(0.5)
-    section.bottom_margin = Inches(0.5)
-    section.left_margin = Inches(0.5)
-    section.right_margin = Inches(0.5)
-
-    contact = sec2.get("contact_info", {})
-    p_name = doc.add_paragraph()
-    p_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_name.paragraph_format.space_before = Pt(0)
-    p_name.paragraph_format.space_after = Pt(1)
-    r_name = p_name.add_run(contact.get("name", "ROHINI TEMBHURNIKAR"))
-    r_name.font.name = "Calibri"
-    r_name.font.size = Pt(15)
-    r_name.font.bold = True
-    r_name.font.color.rgb = RGBColor(0, 0, 0)
-
-    p_contact = doc.add_paragraph()
-    p_contact.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_contact.paragraph_format.space_before = Pt(0)
-    p_contact.paragraph_format.space_after = Pt(8)
-    add_formatted_text_to_paragraph(p_contact, contact.get("details", ""), default_font="Calibri", font_size=Pt(9))
-
-    def add_section_header(title_text):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(8)
-        p.paragraph_format.space_after = Pt(4)
-        r = p.add_run(title_text.upper())
-        r.font.name = "Calibri"
-        r.font.size = Pt(10)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(0, 0, 0)
-        add_bottom_border(p, color_hex="000000", size="8")
-        return p
-
-    add_section_header("PROFESSIONAL SUMMARY")
-    p_sum = doc.add_paragraph()
-    p_sum.paragraph_format.space_before = Pt(0)
-    p_sum.paragraph_format.space_after = Pt(6)
-    add_formatted_text_to_paragraph(p_sum, sec2.get("professional_summary", ""), font_size=Pt(9))
-
-    add_section_header("WORK EXPERIENCE")
-    for role in sec2.get("professional_experience", []):
-        p_role = doc.add_paragraph()
-        p_role.paragraph_format.space_before = Pt(4)
-        p_role.paragraph_format.space_after = Pt(2)
-        add_formatted_text_to_paragraph(p_role, role.get("role_title", "Role"), font_size=Pt(9.5))
-        for b in role.get("bullets", []):
-            p_b = doc.add_paragraph(style='List Bullet')
-            p_b.paragraph_format.space_before = Pt(0)
-            p_b.paragraph_format.space_after = Pt(2)
-            add_formatted_text_to_paragraph(p_b, b.strip(), font_size=Pt(9))
-
-    add_section_header("PROJECTS")
-    for proj in sec2.get("projects", []):
-        p_proj = doc.add_paragraph()
-        p_proj.paragraph_format.space_before = Pt(4)
-        p_proj.paragraph_format.space_after = Pt(2)
-        add_formatted_text_to_paragraph(p_proj, proj.get("project_title", "Project"), font_size=Pt(9.5))
-        for b in proj.get("bullets", []):
-            p_b = doc.add_paragraph(style='List Bullet')
-            p_b.paragraph_format.space_before = Pt(0)
-            p_b.paragraph_format.space_after = Pt(2)
-            add_formatted_text_to_paragraph(p_b, b.strip(), font_size=Pt(9))
-
-    add_section_header("TECHNICAL SKILLS")
-    for cat, val in sec2.get("core_competencies_grouped", {}).items():
-        p_sk = doc.add_paragraph()
-        p_sk.paragraph_format.space_before = Pt(0)
-        p_sk.paragraph_format.space_after = Pt(2)
-        r_cat = p_sk.add_run(f"{cat}: ")
-        r_cat.font.name = "Calibri"
-        r_cat.font.size = Pt(9)
-        r_cat.font.bold = True
-        r_cat.font.color.rgb = RGBColor(0, 0, 0)
-        add_formatted_text_to_paragraph(p_sk, str(val), font_size=Pt(9))
-
-    add_section_header("EDUCATION")
-    for edu in sec2.get("education", []):
-        p_edu = doc.add_paragraph()
-        p_edu.paragraph_format.space_before = Pt(0)
-        p_edu.paragraph_format.space_after = Pt(2)
-        add_formatted_text_to_paragraph(p_edu, str(edu), font_size=Pt(9))
-
-    add_section_header("CERTIFICATIONS")
-    for cert in sec2.get("certifications", []):
-        p_cert = doc.add_paragraph()
-        p_cert.paragraph_format.space_before = Pt(0)
-        p_cert.paragraph_format.space_after = Pt(2)
-        add_formatted_text_to_paragraph(p_cert, str(cert), font_size=Pt(9))
-
-    doc.save(output)
-    output.seek(0)
-    return output
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt
+            )
+            return response.text
+        except errors.APIError as e:
+            if e.code in (503, 404):
+                time.sleep(1)
+                continue
+            break
+    return "Salary benchmark data is currently unavailable."
