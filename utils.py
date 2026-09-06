@@ -1,369 +1,1076 @@
-import streamlit as st
-import streamlit.components.v1 as components
-from utils import (
-    extract_text_from_file, 
-    generate_standard_resume_sheet_html,
-    generate_paper_sheet_tailored_html,
-    generate_new_formatted_docx
-)
-from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
+import docx
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+import html
+import re
+from io import BytesIO
+from pypdf import PdfReader
 
-st.set_page_config(
-    page_title="ResumeTarget | ATS Optimization", 
-    page_icon="🎯", 
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'landing'
+# ============================================================
+# RESUME FORMAT — SOURCE OF TRUTH
+# ============================================================
+# Based on the uploaded reference resume:
+#
+# Page: A4
+# Top margin: 0.6 inch
+# Other margins: 1 cm
+# Font: Calibri
+# Name: 20 pt
+# Job title: 10 pt
+# Contact: 9 pt
+# Section headlines: 11 pt
+# Experience/project titles: 10 pt
+# Body/bullets: 9 pt
+# Text: black
+#
+# The project URLs below were extracted from the uploaded
+# PROJECTS_DESCRIPTION document. Keep this dictionary updated
+# if project URLs change.
+# ============================================================
 
-if 'active_tab' not in st.session_state:
-    st.session_state['active_tab'] = 'Analysis'
+FONT_NAME = "Calibri"
 
-def go_to_landing():
-    st.session_state['page'] = 'landing'
+PAGE_WIDTH_IN = 8.268
+PAGE_HEIGHT_IN = 11.693
 
-# EXACT SAAS STYLING WITH UNIFORM HEIGHT FOR ALL 4 INPUT BOXES & LARGER STEP HEADERS
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+TOP_MARGIN_IN = 0.60
+SIDE_MARGIN_IN = 1 / 2.54  # 1 cm
+BOTTOM_MARGIN_IN = 1 / 2.54  # 1 cm
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif !important;
-    }
-    
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 98% !important;
-    }
-    
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-    }
-    
-    .stApp {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
-    }
+NAME_SIZE = 20
+TITLE_SIZE = 10
+CONTACT_SIZE = 9
+HEADLINE_SIZE = 11
+ENTRY_TITLE_SIZE = 10
+BODY_SIZE = 9
 
-    .feature-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    }
-    
-    .feature-title {
-        color: #2563eb;
-        font-weight: 700;
-        font-size: 1.05rem;
-        margin-bottom: 8px;
-    }
+BLACK = RGBColor(0, 0, 0)
 
-    .tag-green {
-        background-color: #dcfce7;
-        color: #15803d;
-        border: 1px solid #bbf7d0;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        margin: 3px;
-    }
-    
-    .tag-red {
-        background-color: #fee2e2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        margin: 3px;
-    }
 
-    .panel-card {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        padding: 16px 20px;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        margin-bottom: 18px;
-    }
+# Contact links from the uploaded reference resume.
+CONTACT_LINKS = {
+    "LinkedIn": "https://www.linkedin.com/in/rohinitembhurnikar/",
+    "GitHub": "https://github.com/rohinirt",
+    "Portfolio": "https://rohinisportfolio.godaddysites.com/home",
+    "Tableau": "https://public.tableau.com/app/profile/rohini.tembhurnikar/vizzes",
+}
 
-    /* FORCE UNIFORM HEIGHT ON STREAMLIT TEXT AREA TO MATCH FILE UPLOADERS */
-    div[data-baseweb="textarea"] {
-        height: 124px !important;
-        min-height: 124px !important;
-    }
-    div[data-baseweb="textarea"] textarea {
-        height: 100px !important;
-        max-height: 100px !important;
-    }
 
-    /* FORCE BLUE THEME BUTTON */
-    div.stButton > button {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-    }
+# Project links from PROJECTS_DESCRIPTION(2).docx.
+# The matching is intentionally based on project title, so the
+# AI can return a slightly different surrounding description
+# without losing the project URL.
+PROJECT_LINKS = {
+    "LinkedIn Job Market Analysis (2023)": "https://github.com/rohinirt/Python_Projects/blob/main/Linkedin_jobs.ipynb",
+    "House Price Prediction": "https://github.com/rohinirt/Python_Projects/blob/main/House_Price_Prediction.ipynb",
+    "Amazon Product Review Sentiment Analysis": "https://github.com/rohinirt/Python_Projects/blob/main/Amazon_Review_analysis.ipynb",
+    "Zepto Product Data – Exploratory Data Analysis (EDA)": "https://github.com/rohinirt/Python_Projects/tree/main/Zepto%20Inventory%20-%20EDA",
+    "Retail Price Optimization": "https://github.com/rohinirt/Python_Projects/tree/main/Case%20Study%3A%20Retail%20Price%20Optimization",
+    "Customer Lifetime Value (CLTV) Analysis": "https://github.com/rohinirt/Python_Projects/tree/main/Customer%20Lifetime%20Value%20Analysis",
+    "Supply Chain Dashboard": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/SupplyChain_17034125066550/PRODUCTS",
+    "NSE Stock Analysis": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/Top15NSEStocksbyMarketCapitalization/NSEStocks",
+    "Employee Performance Dashboard": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/HRDashboard_17043083751860/MetrixOverview",
+    "Merchandise Sales Dashboard": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/MerchaniseSales/PRODUCTS",
+    "Fitness Business Financial Performance Dashboard": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/FitnessFinance_17239202454140/Dashboard1",
+    "Healthcare Operations Dashboard": "https://app.powerbi.com/view?r=eyJrIjoiMTI0ZmUwMzktMTAwMi00YzFjLTk1MDMtYjc1ZDdjMmU3ZWNiIiwidCI6ImMwZDdmYjJmLTczZDItNDA5NC1iNzY5LTFkZTQ0NDNlNzg5YiJ9",
+    "Cab Rides Analysis Dashboard": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/OlaRides/OVERVIEW",
+    "Pune Uber Trips Analysis": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/UberDashboard_17397212991330/Dashboard1",
+    "Bike Sales in Europe": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/BikeSalesinEurope_17800428612320/Overview",
+    "Amazon Stock Market Trends": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/AmazonStockMarketTrends_17800442486380/Dashboard1",
+    "Instacart Market Basket Analysis": "https://github.com/rohinirt/SQL_Projects/tree/main/Instacart_Market_Basket_Analysis",
+    "Customer Segmentation": "https://github.com/rohinirt/SQL_Projects/tree/main/Customer-Segmentation",
+    "Fraud Detection Analysis": "https://github.com/rohinirt/Fraud_Detection",
+    "Music Store Analysis": "https://github.com/rohinirt/Music_stotre_SQL",
+    "YouTube Trending Video Analysis": "https://github.com/rohinirt/SQL_Projects/tree/main/YouTube%20Top%20200%20Trending%20Video%20Analysis",
+    "Pizza Hut Sales Analysis": "https://github.com/rohinirt/SQL_Projects/tree/main/Pizza%20Sales",
+    "Spotify Songs Analysis": "https://github.com/rohinirt/SQL_Projects/tree/main/Spotify_Analysis",
+    "Social Media Content Performance": "https://app.powerbi.com/view?r=eyJrIjoiZGU5NDI2MmItY2Y2OC00YTcwLTkzMjktNWRhYTAzNTc5YjM2IiwidCI6ImMwZDdmYjJmLTczZDItNDA5NC1iNzY5LTFkZTQ0NDNlNzg5YiJ9",
+    "Automated ATS Job Tracker & Real-Time Telegram Alert System": "https://github.com/rohinirt/Data_Analyst_Job_Alert",
+    "ResumeAlign AI": "https://resume-optimiser-pc5dxc3qh5b3cd3ldiijxq.streamlit.app/",
+    # This project exists in the source file but has no hyperlink there.
+    "Customer Churn Analysis": None,
+}
 
-    /* CUSTOMIZE SEGMENTED CONTROL TO BLUE THEME */
-    div[data-testid="stSegmentedControl"] {
-        background-color: #f1f5f9;
-        padding: 3px;
-        border-radius: 10px;
-        border: 1px solid #cbd5e1;
-        width: 100%;
-    }
-    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stSegmentedControl"] button[aria-selected="false"] {
-        background-color: transparent !important;
-        color: #0f172a !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 
-# PAGE 1: LANDING PAGE
-if st.session_state['page'] == 'landing':
-    # TOP NAVBAR HEADER: LOGO ON LEFT WITH SUBTITLE TEXT BELOW
-    st.markdown("""
-        <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
-            <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
-            <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
-        </div>
-        <div style="font-size: 0.95rem; color: #64748b; margin-top: 4px; margin-bottom: 24px;">
-            Align your resume with the role that matters
-        </div>
-    """, unsafe_allow_html=True)
+def extract_text_from_file(uploaded_file):
+    """Extract plain text while keeping the existing app API unchanged."""
+    if not uploaded_file:
+        return ""
 
-    # UPLOAD SECTION COLUMNS WITH LARGER STEP HEADERS ABOVE EACH BOX
-    uc1, uc2, uc3, uc4 = st.columns(4)
-    
-    with uc1:
-        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
-        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
-    with uc2:
-        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
-        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
-    with uc3:
-        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
-        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
-    with uc4:
-        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
-        jd_input = st.text_area("Target Job Description (JD)", placeholder="Paste job requirements...", label_visibility="collapsed")
-    
-    st.markdown("<br>", unsafe_allow_html=True)
+    text = ""
+    uploaded_file.seek(0)
 
-    analyze_btn = st.button("Analyse and Optimise your Resume for the Targeted Role", type="primary", use_container_width=True)
+    if uploaded_file.name.lower().endswith(".pdf"):
+        pdf = PdfReader(uploaded_file)
+        for page in pdf.pages:
+            text += (page.extract_text() or "") + "\n"
 
-    if analyze_btn:
-        if not uploaded_resume or not jd_input:
-            st.warning("Please upload a Master Resume and paste a Job Description to proceed.")
+    elif uploaded_file.name.lower().endswith(".docx"):
+        document = docx.Document(uploaded_file)
+        for para in document.paragraphs:
+            text += para.text + "\n"
+
+    uploaded_file.seek(0)
+    return text
+
+
+def normalize_text(value):
+    """Normalize titles for robust project-link matching."""
+    if value is None:
+        return ""
+
+    value = str(value)
+    value = value.replace("–", "-").replace("—", "-")
+    value = re.sub(r"\s+", " ", value)
+    value = re.sub(r"[|]+$", "", value)
+    return value.strip().lower()
+
+
+def get_project_url(project_title):
+    """
+    Return the project URL associated with the selected project.
+    Matching is tolerant of minor punctuation/spacing differences.
+    """
+    title = normalize_text(project_title)
+
+    if not title:
+        return None
+
+    # Exact normalized match first.
+    for known_title, url in PROJECT_LINKS.items():
+        if normalize_text(known_title) == title:
+            return url
+
+    # Then allow one title to contain the other.
+    for known_title, url in PROJECT_LINKS.items():
+        known = normalize_text(known_title)
+        if known and (known in title or title in known):
+            return url
+
+    return None
+
+
+def add_bottom_border(paragraph, color_hex="000000", size="8", space="3"):
+    """Add a black bottom rule to a Word paragraph."""
+    pPr = paragraph._p.get_or_add_pPr()
+
+    # Remove existing paragraph borders so repeated calls don't stack them.
+    existing = pPr.find(qn("w:pBdr"))
+    if existing is not None:
+        pPr.remove(existing)
+
+    pBdr = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(qn("w:val"), "single")
+    bottom.set(qn("w:sz"), size)
+    bottom.set(qn("w:space"), space)
+    bottom.set(qn("w:color"), color_hex)
+    pBdr.append(bottom)
+    pPr.append(pBdr)
+
+
+def clean_markdown_bold_spans(text):
+    """
+    Convert Gemini-style **bold** markers into (text, is_bold) spans.
+    """
+    if not text:
+        return []
+
+    pattern = re.compile(r"\*\*(.*?)\*\*", re.DOTALL)
+    spans = []
+    last_idx = 0
+
+    for match in pattern.finditer(text):
+        start, end = match.span()
+
+        if start > last_idx:
+            spans.append((text[last_idx:start], False))
+
+        spans.append((match.group(1), True))
+        last_idx = end
+
+    if last_idx < len(text):
+        remaining = text[last_idx:].replace("**", "")
+        if remaining:
+            spans.append((remaining, False))
+
+    return spans
+
+
+def render_spans_to_html(text):
+    """Render Gemini markdown bold into HTML <strong> tags."""
+    out_html = ""
+
+    for part, is_bold in clean_markdown_bold_spans(text):
+        escaped = html.escape(part)
+        if is_bold:
+            out_html += f"<strong>{escaped}</strong>"
         else:
-            with st.spinner("Executing semantic keyword mapping, gap analysis, and layout generation..."):
-                file_bytes = uploaded_resume.read()
-                uploaded_resume.seek(0)
-                st.session_state['resume_bytes'] = file_bytes
-                st.session_state['file_type'] = uploaded_resume.name.split(".")[-1].lower()
-                st.session_state['file_name'] = uploaded_resume.name
-                
-                resume_text = extract_text_from_file(uploaded_resume)
-                experience_text = extract_text_from_file(uploaded_experience) if uploaded_experience else ""
-                projects_text = extract_text_from_file(uploaded_projects) if uploaded_projects else ""
-                
-                results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
-                
-                filename_parts = results.get("suggested_filename", "").split("_")
-                company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
-                real_salary = fetch_real_web_salary(company_name, "Data Analyst")
-                results["salary_benchmark"] = real_salary
+            out_html += escaped
 
-                st.session_state['results'] = results
-                st.session_state['page'] = 'results'
-                st.session_state['active_tab'] = 'Analysis'
-                st.rerun()
+    return out_html
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### How do we optimise your resume?")
-    f1, f2, f3, f4 = st.columns(4)
-    with f1:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
-    with f2:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
-    with f3:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized Resume side-by-side.</p></div>""", unsafe_allow_html=True)
-    with f4:
-        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates optimmised downloadable resume in .docx format.</p></div>""", unsafe_allow_html=True)
 
-# PAGE 2: RESULTS WORKSPACE
-elif st.session_state['page'] == 'results':
-    
-    res = st.session_state.get('results', {})
-    pre = res.get("pre_optimization", {})
-    post = res.get("post_optimization", {})
-    audit = res.get("audit_categories", {})
-    fitness = res.get("fitness_and_strategy", {})
+def add_docx_run(paragraph, text, size=BODY_SIZE, bold=False, italic=False):
+    """Add a consistently formatted Calibri run."""
+    run = paragraph.add_run(str(text))
+    run.font.name = FONT_NAME
+    run.font.size = Pt(size)
+    run.font.bold = bold
+    run.font.italic = italic
+    run.font.color.rgb = BLACK
 
-    active_tab = st.session_state.get('active_tab', 'Analysis')
+    # Explicitly set eastAsia/complexScript font names too.
+    rPr = run._r.get_or_add_rPr()
 
-    # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, DOWNLOAD BUTTON ALIGNED ON RIGHT
-    col_logo, col_dl = st.columns([3.5, 1.0])
-    
-    with col_logo:
-        st.markdown("""
-            <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
-                <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
-                <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
-            </div>
-        """, unsafe_allow_html=True)
+    rFonts = rPr.find(qn("w:rFonts"))
+    if rFonts is None:
+        rFonts = OxmlElement("w:rFonts")
+        rPr.append(rFonts)
 
-    with col_dl:
-        updated_docx = generate_new_formatted_docx(res)
-        filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
-        st.download_button(
-            label="Download",
-            data=updated_docx,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            key="download_report",
-            use_container_width=True
+    rFonts.set(qn("w:ascii"), FONT_NAME)
+    rFonts.set(qn("w:hAnsi"), FONT_NAME)
+    rFonts.set(qn("w:eastAsia"), FONT_NAME)
+    rFonts.set(qn("w:cs"), FONT_NAME)
+
+    return run
+
+
+def add_docx_hyperlink(paragraph, text, url, size=CONTACT_SIZE, bold=False):
+    """Create a clickable hyperlink in a DOCX without changing its black appearance."""
+    if not url:
+        return add_docx_run(paragraph, text, size=size, bold=bold)
+
+    part = paragraph.part
+    relationship_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), relationship_id)
+
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+
+    rFonts = OxmlElement("w:rFonts")
+    rFonts.set(qn("w:ascii"), FONT_NAME)
+    rFonts.set(qn("w:hAnsi"), FONT_NAME)
+    rFonts.set(qn("w:eastAsia"), FONT_NAME)
+    rFonts.set(qn("w:cs"), FONT_NAME)
+    rPr.append(rFonts)
+
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), str(int(size * 2)))
+    rPr.append(sz)
+
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "000000")
+    rPr.append(color)
+
+    # Do not force underline. The reference resume's link appearance is
+    # controlled by the hyperlink itself/Word theme; keep text black.
+    if bold:
+        b = OxmlElement("w:b")
+        rPr.append(b)
+
+    new_run.append(rPr)
+
+    text_node = OxmlElement("w:t")
+    text_node.text = str(text)
+    new_run.append(text_node)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+
+    return hyperlink
+
+
+def add_bold_spans_to_docx(paragraph, text, size=BODY_SIZE):
+    """Add text containing **bold** markers to a Word paragraph."""
+    for part, is_bold in clean_markdown_bold_spans(str(text).strip()):
+        if part:
+            add_docx_run(paragraph, part, size=size, bold=is_bold)
+
+
+def add_resume_bullet_docx(doc, text):
+    """Add the compact bullet used throughout the reference resume."""
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = 1.15
+    p.paragraph_format.left_indent = Inches(0.20)
+    p.paragraph_format.first_line_indent = Inches(-0.15)
+
+    add_docx_run(p, "• ", size=BODY_SIZE)
+    add_bold_spans_to_docx(p, text, size=BODY_SIZE)
+
+    return p
+
+
+def add_section_header_docx(doc, title):
+    """11 pt black uppercase heading with a black bottom rule."""
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(4)
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.line_spacing = 1.0
+    p.paragraph_format.keep_with_next = True
+
+    add_docx_run(
+        p,
+        str(title).upper(),
+        size=HEADLINE_SIZE,
+        bold=True,
+    )
+
+    add_bottom_border(p, color_hex="000000", size="8", space="2")
+    return p
+
+
+def add_contact_line_docx(doc, contact_details):
+    """
+    Build the contact line while preserving clickable links.
+    Known link labels are converted into real Word hyperlinks.
+    """
+    details = str(contact_details or "").strip()
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = 1.15
+
+    # Split only on known link labels so phone/email/location remain plain text.
+    labels = list(CONTACT_LINKS.keys())
+    pattern = re.compile("(" + "|".join(re.escape(x) for x in labels) + ")")
+
+    parts = pattern.split(details)
+
+    for part in parts:
+        if not part:
+            continue
+
+        if part in CONTACT_LINKS:
+            add_docx_hyperlink(
+                p,
+                part,
+                CONTACT_LINKS[part],
+                size=CONTACT_SIZE,
+            )
+        else:
+            add_docx_run(p, part, size=CONTACT_SIZE)
+
+    return p
+
+
+def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
+    """
+    Original resume preview.
+    When the uploaded file is DOCX, preserve its actual hyperlink targets.
+    """
+    paragraphs = []
+
+    if is_docx_file and isinstance(content_text_or_bytes, bytes) and content_text_or_bytes:
+        try:
+            document = docx.Document(BytesIO(content_text_or_bytes))
+            for p in document.paragraphs:
+                if p.text.strip():
+                    paragraphs.append(("docx", p))
+        except Exception:
+            paragraphs = []
+
+    if not paragraphs:
+        lines = [
+            line.strip()
+            for line in str(content_text_or_bytes).splitlines()
+            if line.strip()
+        ]
+        paragraphs = [("text", line) for line in lines]
+
+    if not paragraphs:
+        return "<p>No content found.</p>"
+
+    # For the uploaded reference resume, the first three lines are:
+    # name / Data Analyst / contact.
+    first_text = paragraphs[0][1].text if paragraphs[0][0] == "docx" else paragraphs[0][1]
+    second_text = paragraphs[1][1].text if len(paragraphs) > 1 and paragraphs[1][0] == "docx" else (
+        paragraphs[1][1] if len(paragraphs) > 1 else ""
+    )
+    third_text = paragraphs[2][1].text if len(paragraphs) > 2 and paragraphs[2][0] == "docx" else (
+        paragraphs[2][1] if len(paragraphs) > 2 else ""
+    )
+
+    body = paragraphs[3:] if len(paragraphs) > 3 else []
+
+    def paragraph_to_html(item, default_size=BODY_SIZE):
+        kind, value = item
+
+        if kind == "text":
+            return render_spans_to_html(value)
+
+        p = value
+        pieces = []
+
+        # Walk direct children so hyperlinks are not lost.
+        for child in p._p:
+            if child.tag == qn("w:hyperlink"):
+                rid = child.get(qn("r:id"))
+                url = None
+                if rid and rid in p.part.rels:
+                    url = p.part.rels[rid].target_ref
+
+                link_text = "".join(child.xpath(".//w:t/text()"))
+                if url:
+                    pieces.append(
+                        f'<a href="{html.escape(url, quote=True)}" '
+                        f'target="_blank" rel="noopener noreferrer">'
+                        f'{html.escape(link_text)}</a>'
+                    )
+                else:
+                    pieces.append(html.escape(link_text))
+
+            elif child.tag == qn("w:r"):
+                texts = child.xpath(".//w:t/text()")
+                if texts:
+                    pieces.append(html.escape("".join(texts)))
+
+        return "".join(pieces) if pieces else html.escape(p.text)
+
+    body_html = ""
+    current_section = ""
+
+    for item in body:
+        text = item[1].text if item[0] == "docx" else str(item[1])
+        stripped = text.strip()
+
+        if not stripped:
+            continue
+
+        if stripped.isupper() and len(stripped) < 45:
+            current_section = stripped
+            body_html += f'<div class="section-title">{html.escape(stripped)}</div>'
+            continue
+
+        rendered = paragraph_to_html(item)
+
+        is_bullet = (
+            stripped.startswith("•")
+            or stripped.startswith("")
+            or stripped.startswith("-")
+            or stripped.startswith("*")
         )
 
-    st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
+        if is_bullet:
+            clean = re.sub(r"^[•*\\-]\s*", "", stripped)
+            rendered = paragraph_to_html(("text", clean)) if item[0] == "text" else rendered
+            body_html += f'<div class="bullet">{rendered}</div>'
 
-    # EXACT 50 / 50 EQUAL SPLIT LAYOUT
-    left_col, right_col = st.columns([1, 1])
-
-    # LEFT SIDE: UPLOADED RESUME INSPECTOR
-    with left_col:
-        hdr_l1, hdr_l2 = st.columns([2.2, 1])
-        with hdr_l1:
-            st.markdown(f"""
-                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
-                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">{st.session_state.get('file_name', 'Rohini_Tembhurnikar_Resume.pdf')}</div>
-            """, unsafe_allow_html=True)
-        with hdr_l2:
-            if st.button("Change File", on_click=go_to_landing, key="change_file_btn", use_container_width=True):
-                pass
-        
-        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-        
-        file_type = st.session_state.get('file_type', 'pdf')
-        resume_bytes = st.session_state.get('resume_bytes', b"")
-        if file_type == 'docx':
-            orig_html = generate_standard_resume_sheet_html("Original Resume", resume_bytes, is_docx_file=True)
-        else:
-            orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
-            orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
-            
-        components.html(orig_html, height=850, scrolling=True)
-
-    # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
-    with right_col:
-        # Determine score and verdict dynamically based on active tab
-        if active_tab == 'Analysis':
-            score_val = pre.get('ats_score', 78)
-            verdict_text = "Moderate Match" if score_val < 85 else "Great Match!"
-        else:
-            score_val = post.get('ats_score', 93)
-            verdict_text = "Great Match!"
-
-        # SPLIT 50/50 DIRECTLY WITHOUT PANEL-CARD BACKGROUND WRAPPER
-        top_card_c1, top_card_c2 = st.columns([1, 1])
-
-        with top_card_c1:
-            selected_tab = st.segmented_control(
-                "View Mode",
-                options=["Analysis", "Optimized Resume"],
-                default=active_tab,
-                label_visibility="collapsed",
-                key="view_segmented_control"
+        elif current_section in ("EXPERIENCE", "PROJECTS") and (
+            " | " in stripped
+            or (
+                item[0] == "docx"
+                and any(r.bold for r in item[1].runs)
+                and len(stripped) < 130
             )
-            if selected_tab and selected_tab != active_tab:
-                st.session_state['active_tab'] = selected_tab
-                st.rerun()
-
-        with top_card_c2:
-            st.markdown(f"""
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; height: 100%;">
-                    <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
-                        Overall ATS Score <span style="font-size: 1.5rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700; font-size: 0.95rem;">({verdict_text})</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
-
-        if active_tab == 'Analysis':
-            # Extract lists generated from comparing Original Uploaded Resume vs JD
-            matching_kws = pre.get('matching_keywords', post.get('matching_keywords', []))
-            missing_kws = pre.get('missing_keywords', post.get('missing_keywords', []))
-
-            matching_tags = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
-            missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
-
-            # MATCHING KEYWORDS CARD
-            st.markdown(f"""
-            <div class="panel-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Keywords</span>
-                    <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
-                </div>
-                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
-                <div>{matching_tags if matching_tags else '<em style="font-size:0.85rem; color:#64748b;">No matching keywords found.</em>'}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # MISSING KEYWORDS CARD (NO HEIGHT/OVERFLOW LIMIT)
-            st.markdown(f"""
-            <div class="panel-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Keywords</span>
-                    <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
-                </div>
-                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
-                <div>{missing_tags if missing_tags else '<em style="font-size:0.85rem; color:#15803d;">No missing keywords! Perfect match.</em>'}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            strat_points = fitness.get('alignment_strategy', [
-                "Highlight automated ETL data processing pipelines and record scale.",
-                "Position technical competencies upfront for immediate ATS keyword weighting.",
-                "Ensure bullet points strictly adhere to the Google XYZ impact formula."
-            ])
-            strat_items_html = "".join([f"<li style='margin-bottom: 6px;'>{strat}</li>" for strat in strat_points])
-            
-            st.markdown(f"""
-            <div class="panel-card">
-                <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
-                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
-                    <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation matching core technical requirements.')}
-                </div>
-                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 12px;">
-                    <strong>Gaps & Missing Elements:</strong> {fitness.get('gaps_and_missing_elements', 'Minor gaps in advanced secondary cloud workflows.')}
-                </div>
-                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
-                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #64748b; line-height: 1.5;">
-                    {strat_items_html}
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+        ):
+            body_html += f'<div class="entry-title">{rendered}</div>'
 
         else:
-            paper_html = generate_paper_sheet_tailored_html(res)
-            components.html(paper_html, height=880, scrolling=True)
+            body_html += f'<div class="body-text">{rendered}</div>'
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    * {{
+        box-sizing: border-box;
+    }}
+
+    html, body {{
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+    }}
+
+    body {{
+        font-family: Calibri, Carlito, sans-serif;
+        color: #000000;
+        font-size: 9pt;
+    }}
+
+    .resume-page {{
+        width: 8.268in;
+        min-height: 11.693in;
+        padding: 0.6in 1cm 1cm 1cm;
+        margin: 0 auto;
+        background: #ffffff;
+    }}
+
+    .header-name {{
+        font-size: 20pt;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1;
+        margin: 0;
+    }}
+
+    .header-title {{
+        font-size: 10pt;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.15;
+        margin: 0;
+    }}
+
+    .header-contact {{
+        font-size: 9pt;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1.15;
+        margin: 0;
+    }}
+
+    .header-contact a,
+    a {{
+        color: #000000;
+        text-decoration: none;
+    }}
+
+    .section-title {{
+        font-size: 11pt;
+        font-weight: 700;
+        line-height: 1.0;
+        margin-top: 4pt;
+        margin-bottom: 2pt;
+        padding-bottom: 2pt;
+        border-bottom: 1px solid #000000;
+        color: #000000;
+        text-transform: uppercase;
+    }}
+
+    .body-text {{
+        font-size: 9pt;
+        line-height: 1.15;
+        margin: 0;
+        color: #000000;
+    }}
+
+    .entry-title {{
+        font-size: 10pt;
+        line-height: 1.15;
+        font-weight: 700;
+        margin: 2pt 0 0 0;
+        color: #000000;
+    }}
+
+    .bullet {{
+        font-size: 9pt;
+        line-height: 1.15;
+        margin: 0;
+        padding-left: 13px;
+        text-indent: -9px;
+        color: #000000;
+    }}
+
+    strong {{
+        font-weight: 700;
+    }}
+</style>
+</head>
+<body>
+<div class="resume-page">
+    <div class="header-name">{html.escape(first_text)}</div>
+    <div class="header-title">{html.escape(second_text)}</div>
+    <div class="header-contact">{html.escape(third_text)}</div>
+    {body_html}
+</div>
+</body>
+</html>
+"""
+
+
+def _contact_html(contact_details):
+    """Render contact details with clickable known links."""
+    details = str(contact_details or "").strip()
+
+    labels = list(CONTACT_LINKS.keys())
+    pattern = re.compile("(" + "|".join(re.escape(x) for x in labels) + ")")
+
+    parts = pattern.split(details)
+    out = []
+
+    for part in parts:
+        if not part:
+            continue
+
+        if part in CONTACT_LINKS:
+            url = CONTACT_LINKS[part]
+            out.append(
+                f'<a href="{html.escape(url, quote=True)}" '
+                f'target="_blank" rel="noopener noreferrer">{html.escape(part)}</a>'
+            )
+        else:
+            out.append(html.escape(part))
+
+    return "".join(out)
+
+
+def _project_title_html(project_title):
+    """
+    Render project title and its clickable Link.
+    The AI does not need to generate the URL itself.
+    """
+    title = str(project_title or "").strip()
+    url = get_project_url(title)
+
+    # If the title already contains a Link/GitHub token, remove it
+    # and add our controlled hyperlink at the end.
+    cleaned_title = re.sub(
+        r"\s*\|\s*(?:Link|GitHub)\s*$",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    title_html = render_spans_to_html(cleaned_title)
+
+    if url:
+        return (
+            f'{title_html} <span class="separator">|</span> '
+            f'<a class="project-link" href="{html.escape(url, quote=True)}" '
+            f'target="_blank" rel="noopener noreferrer">Link</a>'
+        )
+
+    return title_html
+
+
+def _project_title_docx(doc, project_title):
+    """Render a project title plus its actual clickable Word Link."""
+    title = str(project_title or "").strip()
+
+    cleaned_title = re.sub(
+        r"\s*\|\s*(?:Link|GitHub)\s*$",
+        "",
+        title,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = 1.0
+    p.paragraph_format.keep_with_next = True
+
+    add_bold_spans_to_docx(p, cleaned_title, size=ENTRY_TITLE_SIZE)
+
+    url = get_project_url(title)
+
+    if url:
+        add_docx_run(p, " | ", size=ENTRY_TITLE_SIZE, bold=True)
+        add_docx_hyperlink(p, "Link", url, size=ENTRY_TITLE_SIZE)
+
+    return p
+
+
+def generate_paper_sheet_tailored_html(results):
+    """
+    Optimized resume preview.
+
+    This is deliberately styled from the same specification as
+    generate_new_formatted_docx(), so preview and download use the
+    same typography, spacing, dimensions and hyperlink behavior.
+    """
+    sec2 = results.get("section_2_tailored_content", {})
+
+    contact = sec2.get("contact_info", {})
+    cand_name = str(contact.get("name", "Rohini Tembhurnikar")).strip()
+    cand_details = str(
+        contact.get(
+            "details",
+            "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | "
+            "Hyderabad, India | LinkedIn | GitHub | Portfolio | Tableau",
+        )
+    ).strip()
+
+    summary = str(sec2.get("professional_summary", "")).strip()
+    skills_grouped = sec2.get("core_competencies_grouped", {}) or {}
+    exp_list = sec2.get("professional_experience", []) or []
+    proj_list = sec2.get("projects", []) or []
+    edu_list = sec2.get("education", []) or []
+    cert_list = sec2.get("certifications", []) or []
+
+    skills_html = ""
+    for cat, val in skills_grouped.items():
+        skills_html += (
+            '<div class="skill-line">'
+            f'<strong>{html.escape(str(cat))}:</strong> '
+            f'{html.escape(str(val))}'
+            '</div>'
+        )
+
+    exp_html = ""
+    for role in exp_list:
+        role_title = str(role.get("role_title", "")).strip()
+
+        exp_html += (
+            f'<div class="entry-title">{render_spans_to_html(role_title)}</div>'
+        )
+
+        for bullet in role.get("bullets", []) or []:
+            clean_bullet = re.sub(r"^[•*\\-]\s*", "", str(bullet).strip())
+            exp_html += (
+                f'<div class="bullet">• '
+                f'{render_spans_to_html(clean_bullet)}</div>'
+            )
+
+    proj_html = ""
+    for proj in proj_list:
+        proj_title = str(proj.get("project_title", "")).strip()
+
+        proj_html += (
+            f'<div class="entry-title">{_project_title_html(proj_title)}</div>'
+        )
+
+        for bullet in proj.get("bullets", []) or []:
+            clean_bullet = re.sub(r"^[•*\\-]\s*", "", str(bullet).strip())
+            proj_html += (
+                f'<div class="bullet">• '
+                f'{render_spans_to_html(clean_bullet)}</div>'
+            )
+
+    def simple_lines(items):
+        out = ""
+        for item in items:
+            txt = str(item).strip()
+            if not txt:
+                continue
+
+            # Preserve bolding if Gemini returned markdown.
+            out += f'<div class="body-text">{render_spans_to_html(txt)}</div>'
+        return out
+
+    edu_html = simple_lines(edu_list)
+    cert_html = simple_lines(cert_list)
+
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    * {{
+        box-sizing: border-box;
+    }}
+
+    html, body {{
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+    }}
+
+    body {{
+        font-family: Calibri, Carlito, sans-serif;
+        color: #000000;
+        font-size: 9pt;
+    }}
+
+    .resume-page {{
+        width: 8.268in;
+        min-height: 11.693in;
+        padding: 0.6in 1cm 1cm 1cm;
+        margin: 0 auto;
+        background: #ffffff;
+    }}
+
+    .header-name {{
+        font-size: 20pt;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1;
+        margin: 0;
+    }}
+
+    .header-title {{
+        font-size: 10pt;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.15;
+        margin: 0;
+    }}
+
+    .header-contact {{
+        font-size: 9pt;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1.15;
+        margin: 0;
+    }}
+
+    .header-contact a,
+    .project-link,
+    a {{
+        color: #000000;
+        text-decoration: none;
+    }}
+
+    .section-title {{
+        font-size: 11pt;
+        font-weight: 700;
+        line-height: 1.0;
+        margin-top: 4pt;
+        margin-bottom: 2pt;
+        padding-bottom: 2pt;
+        border-bottom: 1px solid #000000;
+        color: #000000;
+        text-transform: uppercase;
+    }}
+
+    .body-text {{
+        font-size: 9pt;
+        line-height: 1.15;
+        margin: 0;
+        color: #000000;
+    }}
+
+    .skill-line {{
+        font-size: 9pt;
+        line-height: 1.15;
+        margin: 0;
+        color: #000000;
+    }}
+
+    .entry-title {{
+        font-size: 10pt;
+        line-height: 1.15;
+        font-weight: 700;
+        margin: 2pt 0 0 0;
+        color: #000000;
+    }}
+
+    .bullet {{
+        font-size: 9pt;
+        line-height: 1.15;
+        margin: 0;
+        padding-left: 13px;
+        text-indent: -9px;
+        color: #000000;
+    }}
+
+    .separator {{
+        font-weight: 700;
+    }}
+
+    strong {{
+        font-weight: 700;
+    }}
+</style>
+</head>
+<body>
+<div class="resume-page">
+
+    <div class="header-name">{html.escape(cand_name)}</div>
+    <div class="header-title">Data Analyst</div>
+    <div class="header-contact">{_contact_html(cand_details)}</div>
+
+    <div class="section-title">PROFESSIONAL SUMMARY</div>
+    <div class="body-text">{render_spans_to_html(summary)}</div>
+
+    <div class="section-title">SKILLS</div>
+    {skills_html}
+
+    <div class="section-title">EXPERIENCE</div>
+    {exp_html}
+
+    <div class="section-title">PROJECTS</div>
+    {proj_html}
+
+    <div class="section-title">EDUCATION</div>
+    {edu_html}
+
+    <div class="section-title">CERTIFICATIONS</div>
+    {cert_html}
+
+</div>
+</body>
+</html>
+"""
+
+
+def _set_document_defaults(doc):
+    """Set A4 page, margins and Normal style to the reference resume."""
+    section = doc.sections[0]
+
+    section.page_width = Inches(PAGE_WIDTH_IN)
+    section.page_height = Inches(PAGE_HEIGHT_IN)
+
+    section.top_margin = Inches(TOP_MARGIN_IN)
+    section.bottom_margin = Inches(BOTTOM_MARGIN_IN)
+    section.left_margin = Inches(SIDE_MARGIN_IN)
+    section.right_margin = Inches(SIDE_MARGIN_IN)
+
+    normal = doc.styles["Normal"]
+    normal.font.name = FONT_NAME
+    normal.font.size = Pt(BODY_SIZE)
+
+    # Ensure Word uses Calibri for all scripts.
+    rPr = normal.element.rPr
+    rFonts = rPr.rFonts
+    rFonts.set(qn("w:ascii"), FONT_NAME)
+    rFonts.set(qn("w:hAnsi"), FONT_NAME)
+    rFonts.set(qn("w:eastAsia"), FONT_NAME)
+    rFonts.set(qn("w:cs"), FONT_NAME)
+
+
+def generate_new_formatted_docx(results):
+    """
+    Generate the downloadable optimized resume.
+
+    The layout intentionally mirrors generate_paper_sheet_tailored_html():
+    A4, Calibri, black text, same font sizes, same margins and compact
+    spacing.
+    """
+    output = BytesIO()
+    doc = docx.Document()
+
+    _set_document_defaults(doc)
+
+    sec2 = results.get("section_2_tailored_content", {}) or {}
+    contact = sec2.get("contact_info", {}) or {}
+
+    # --------------------------------------------------------
+    # HEADER
+    # --------------------------------------------------------
+    p_name = doc.add_paragraph()
+    p_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_name.paragraph_format.space_before = Pt(0)
+    p_name.paragraph_format.space_after = Pt(0)
+    p_name.paragraph_format.line_spacing = 1.0
+
+    add_docx_run(
+        p_name,
+        contact.get("name", "Rohini Tembhurnikar"),
+        size=NAME_SIZE,
+    )
+
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_title.paragraph_format.space_before = Pt(0)
+    p_title.paragraph_format.space_after = Pt(0)
+    p_title.paragraph_format.line_spacing = 1.0
+
+    add_docx_run(
+        p_title,
+        "Data Analyst",
+        size=TITLE_SIZE,
+        bold=True,
+    )
+
+    add_contact_line_docx(
+        doc,
+        contact.get(
+            "details",
+            "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | "
+            "Hyderabad, India | LinkedIn | GitHub | Portfolio | Tableau",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # PROFESSIONAL SUMMARY
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "PROFESSIONAL SUMMARY")
+
+    p_summary = doc.add_paragraph()
+    p_summary.paragraph_format.space_before = Pt(0)
+    p_summary.paragraph_format.space_after = Pt(0)
+    p_summary.paragraph_format.line_spacing = 1.15
+
+    add_bold_spans_to_docx(
+        p_summary,
+        sec2.get("professional_summary", ""),
+        size=BODY_SIZE,
+    )
+
+    # --------------------------------------------------------
+    # SKILLS
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "SKILLS")
+
+    for cat, val in (sec2.get("core_competencies_grouped", {}) or {}).items():
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = 1.15
+
+        add_docx_run(p, f"{cat}: ", size=BODY_SIZE, bold=True)
+        add_docx_run(p, str(val), size=BODY_SIZE)
+
+    # --------------------------------------------------------
+    # EXPERIENCE
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "EXPERIENCE")
+
+    for role in sec2.get("professional_experience", []) or []:
+        p_role = doc.add_paragraph()
+        p_role.paragraph_format.space_before = Pt(2)
+        p_role.paragraph_format.space_after = Pt(0)
+        p_role.paragraph_format.line_spacing = 1.0
+        p_role.paragraph_format.keep_with_next = True
+
+        add_bold_spans_to_docx(
+            p_role,
+            role.get("role_title", "Role"),
+            size=ENTRY_TITLE_SIZE,
+        )
+
+        for bullet in role.get("bullets", []) or []:
+            add_resume_bullet_docx(doc, bullet)
+
+    # --------------------------------------------------------
+    # PROJECTS
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "PROJECTS")
+
+    for proj in sec2.get("projects", []) or []:
+        _project_title_docx(
+            doc,
+            proj.get("project_title", "Project"),
+        )
+
+        for bullet in proj.get("bullets", []) or []:
+            add_resume_bullet_docx(doc, bullet)
+
+    # --------------------------------------------------------
+    # EDUCATION
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "EDUCATION")
+
+    for edu in sec2.get("education", []) or []:
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = 1.15
+
+        add_bold_spans_to_docx(p, str(edu), size=BODY_SIZE)
+
+    # --------------------------------------------------------
+    # CERTIFICATIONS
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "CERTIFICATIONS")
+
+    for cert in sec2.get("certifications", []) or []:
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = 1.15
+
+        add_bold_spans_to_docx(p, str(cert), size=BODY_SIZE)
+
+    doc.save(output)
+    output.seek(0)
+    return output
