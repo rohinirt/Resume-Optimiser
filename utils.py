@@ -1,498 +1,369 @@
-import docx
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-import base64
-import html
-import re
-from io import BytesIO
-from pypdf import PdfReader
+import streamlit as st
+import streamlit.components.v1 as components
+from utils import (
+    extract_text_from_file, 
+    generate_standard_resume_sheet_html,
+    generate_paper_sheet_tailored_html,
+    generate_new_formatted_docx
+)
+from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
-def extract_text_from_file(uploaded_file):
-    if not uploaded_file:
-        return ""
-    text = ""
-    uploaded_file.seek(0)
-    if uploaded_file.name.endswith(".pdf"):
-        pdf = PdfReader(uploaded_file)
-        for page in pdf.pages:
-            text += (page.extract_text() or "") + "\n"
-    elif uploaded_file.name.endswith(".docx"):
-        doc = docx.Document(uploaded_file)
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-    uploaded_file.seek(0)
-    return text
+st.set_page_config(
+    page_title="ResumeTarget | ATS Optimization", 
+    page_icon="🎯", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-def add_bottom_border(paragraph, color_hex="0F172A", size="12"):
-    pPr = paragraph._p.get_or_add_pPr()
-    pBdr = OxmlElement('w:pBdr')
-    bottom = OxmlElement('w:bottom')
-    bottom.set(qn('w:val'), 'single')
-    bottom.set(qn('w:sz'), size)
-    bottom.set(qn('w:space'), '4')
-    bottom.set(qn('w:color'), color_hex)
-    pBdr.append(bottom)
-    pPr.append(pBdr)
+if 'page' not in st.session_state:
+    st.session_state['page'] = 'landing'
 
-def clean_markdown_bold_spans(text):
-    if not text:
-        return []
-    pattern = re.compile(r'\*\*(.*?)\*\*')
-    spans = []
-    last_idx = 0
-    for match in pattern.finditer(text):
-        start, end = match.span()
-        if start > last_idx:
-            spans.append((text[last_idx:start], False))
-        spans.append((match.group(1), True))
-        last_idx = end
-    if last_idx < len(text):
-        remaining = text[last_idx:].replace("**", "")
-        if remaining:
-            spans.append((remaining, False))
-    return spans
+if 'active_tab' not in st.session_state:
+    st.session_state['active_tab'] = 'Analysis'
 
-def render_spans_to_html(text):
-    spans = clean_markdown_bold_spans(text)
-    out_html = ""
-    for part, is_bold in spans:
-        escaped_part = html.escape(part)
-        if is_bold:
-            out_html += f'<strong>{escaped_part}</strong>'
+def go_to_landing():
+    st.session_state['page'] = 'landing'
+
+# EXACT SAAS STYLING WITH UNIFORM HEIGHT FOR ALL 4 INPUT BOXES & LARGER STEP HEADERS
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif !important;
+    }
+    
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 98% !important;
+    }
+    
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    
+    .stApp {
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }
+
+    .feature-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    
+    .feature-title {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-bottom: 8px;
+    }
+
+    .tag-green {
+        background-color: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin: 3px;
+    }
+    
+    .tag-red {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin: 3px;
+    }
+
+    .panel-card {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 16px 20px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        margin-bottom: 18px;
+    }
+
+    /* FORCE UNIFORM HEIGHT ON STREAMLIT TEXT AREA TO MATCH FILE UPLOADERS */
+    div[data-baseweb="textarea"] {
+        height: 124px !important;
+        min-height: 124px !important;
+    }
+    div[data-baseweb="textarea"] textarea {
+        height: 100px !important;
+        max-height: 100px !important;
+    }
+
+    /* FORCE BLUE THEME BUTTON */
+    div.stButton > button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+
+    /* CUSTOMIZE SEGMENTED CONTROL TO BLUE THEME */
+    div[data-testid="stSegmentedControl"] {
+        background-color: #f1f5f9;
+        padding: 3px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        width: 100%;
+    }
+    div[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stSegmentedControl"] button[aria-selected="false"] {
+        background-color: transparent !important;
+        color: #0f172a !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# PAGE 1: LANDING PAGE
+if st.session_state['page'] == 'landing':
+    # TOP NAVBAR HEADER: LOGO ON LEFT WITH SUBTITLE TEXT BELOW
+    st.markdown("""
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
+            <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">R</div>
+            <span style="font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
+        </div>
+        <div style="font-size: 0.95rem; color: #64748b; margin-top: 4px; margin-bottom: 24px;">
+            Align your resume with the role that matters
+        </div>
+    """, unsafe_allow_html=True)
+
+    # UPLOAD SECTION COLUMNS WITH LARGER STEP HEADERS ABOVE EACH BOX
+    uc1, uc2, uc3, uc4 = st.columns(4)
+    
+    with uc1:
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
+        uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
+    with uc2:
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
+        uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
+    with uc3:
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
+        uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
+    with uc4:
+        st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
+        jd_input = st.text_area("Target Job Description (JD)", placeholder="Paste job requirements...", label_visibility="collapsed")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    analyze_btn = st.button("Analyse and Optimise your Resume for the Targeted Role", type="primary", use_container_width=True)
+
+    if analyze_btn:
+        if not uploaded_resume or not jd_input:
+            st.warning("Please upload a Master Resume and paste a Job Description to proceed.")
         else:
-            out_html += escaped_part
-    return out_html
+            with st.spinner("Executing semantic keyword mapping, gap analysis, and layout generation..."):
+                file_bytes = uploaded_resume.read()
+                uploaded_resume.seek(0)
+                st.session_state['resume_bytes'] = file_bytes
+                st.session_state['file_type'] = uploaded_resume.name.split(".")[-1].lower()
+                st.session_state['file_name'] = uploaded_resume.name
+                
+                resume_text = extract_text_from_file(uploaded_resume)
+                experience_text = extract_text_from_file(uploaded_experience) if uploaded_experience else ""
+                projects_text = extract_text_from_file(uploaded_projects) if uploaded_projects else ""
+                
+                results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
+                
+                filename_parts = results.get("suggested_filename", "").split("_")
+                company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
+                real_salary = fetch_real_web_salary(company_name, "Data Analyst")
+                results["salary_benchmark"] = real_salary
 
-def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
-    if is_docx_file and isinstance(content_text_or_bytes, bytes) and len(content_text_or_bytes) > 0:
-        try:
-            doc = docx.Document(BytesIO(content_text_or_bytes))
-            lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-        except Exception:
-            lines = []
-    else:
-        lines = [line.strip() for line in str(content_text_or_bytes).split('\n') if line.strip()]
+                st.session_state['results'] = results
+                st.session_state['page'] = 'results'
+                st.session_state['active_tab'] = 'Analysis'
+                st.rerun()
 
-    if not lines:
-        return "<p>No content found.</p>"
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### How do we optimise your resume?")
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Semantic Gap Analysis</div><p style="font-size:0.85rem; color:#64748b;">Evaluates technical coverage against JD requirements.</p></div>""", unsafe_allow_html=True)
+    with f2:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Google XYZ Rewrites</div><p style="font-size:0.85rem; color:#64748b;">Restructures bullet points for quantifiable impact.</p></div>""", unsafe_allow_html=True)
+    with f3:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Dual Sheet Previews</div><p style="font-size:0.85rem; color:#64748b;">Compare original vs optimized Resume side-by-side.</p></div>""", unsafe_allow_html=True)
+    with f4:
+        st.markdown("""<div class="feature-card"><div class="feature-title">Executive Word Export</div><p style="font-size:0.85rem; color:#64748b;">Generates optimmised downloadable resume in .docx format.</p></div>""", unsafe_allow_html=True)
 
-    cand_name = html.escape(lines[0])
-    cand_details = html.escape(lines[1]) if len(lines) > 1 else ""
-    body_lines = lines[2:] if len(lines) > 2 else lines[1:]
+# PAGE 2: RESULTS WORKSPACE
+elif st.session_state['page'] == 'results':
+    
+    res = st.session_state.get('results', {})
+    pre = res.get("pre_optimization", {})
+    post = res.get("post_optimization", {})
+    audit = res.get("audit_categories", {})
+    fitness = res.get("fitness_and_strategy", {})
 
-    paragraphs_html = ""
-    current_section = ""
-    in_bullet_list = False
+    active_tab = st.session_state.get('active_tab', 'Analysis')
 
-    for txt in body_lines:
-        escaped_txt = html.escape(txt)
-        if txt.isupper() and len(txt) < 40:
-            if in_bullet_list:
-                paragraphs_html += "</ul>"
-                in_bullet_list = False
-            current_section = txt.upper()
-            paragraphs_html += f'<div class="section-title">{escaped_txt}</div>'
-            continue
+    # CLEAN TOP NAVBAR HEADER: LOGO ON LEFT, DOWNLOAD BUTTON ALIGNED ON RIGHT
+    col_logo, col_dl = st.columns([3.5, 1.0])
+    
+    with col_logo:
+        st.markdown("""
+            <div style="display: flex; align-items: center; gap: 10px; padding-top: 4px;">
+                <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem;">R</div>
+                <span style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">ResumeAlign AI</span>
+            </div>
+        """, unsafe_allow_html=True)
 
-        is_bullet = txt.startswith("•") or txt.startswith("-") or txt.startswith("*") or (
-            ("EXPERIENCE" in current_section or "PROJECTS" in current_section) and len(txt) > 30 and not any(k in txt for k in ["Jan 2", "Oct 2", "2026", "2025", "2024"])
+    with col_dl:
+        updated_docx = generate_new_formatted_docx(res)
+        filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
+        st.download_button(
+            label="Download",
+            data=updated_docx,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key="download_report",
+            use_container_width=True
         )
 
-        if is_bullet:
-            if not in_bullet_list:
-                paragraphs_html += '<ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-                in_bullet_list = True
-            clean_bullet = txt.lstrip("•-* ").strip()
-            formatted_bullet = render_spans_to_html(clean_bullet)
-            paragraphs_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_bullet}</li>'
+    st.markdown("<hr style='margin: 12px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
+
+    # EXACT 50 / 50 EQUAL SPLIT LAYOUT
+    left_col, right_col = st.columns([1, 1])
+
+    # LEFT SIDE: UPLOADED RESUME INSPECTOR
+    with left_col:
+        hdr_l1, hdr_l2 = st.columns([2.2, 1])
+        with hdr_l1:
+            st.markdown(f"""
+                <div style="font-weight: 800; font-size: 1.15rem; color: #0f172a;">Uploaded Resume</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">{st.session_state.get('file_name', 'Rohini_Tembhurnikar_Resume.pdf')}</div>
+            """, unsafe_allow_html=True)
+        with hdr_l2:
+            if st.button("Change File", on_click=go_to_landing, key="change_file_btn", use_container_width=True):
+                pass
+        
+        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        
+        file_type = st.session_state.get('file_type', 'pdf')
+        resume_bytes = st.session_state.get('resume_bytes', b"")
+        if file_type == 'docx':
+            orig_html = generate_standard_resume_sheet_html("Original Resume", resume_bytes, is_docx_file=True)
         else:
-            if in_bullet_list:
-                paragraphs_html += "</ul>"
-                in_bullet_list = False
+            orig_text = extract_text_from_file(st.session_state.get('upload_resume')) if 'upload_resume' in st.session_state else ""
+            orig_html = generate_standard_resume_sheet_html("Original Resume", orig_text, is_docx_file=False)
+            
+        components.html(orig_html, height=850, scrolling=True)
 
-            if ":" in txt and ("SKILLS" in current_section or len(txt) < 80):
-                parts = txt.split(":", 1)
-                formatted_line = f'<strong>{html.escape(parts[0])}:</strong>{render_spans_to_html(parts[1])}'
-                paragraphs_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;">{formatted_line}</div>'
-            elif "EXPERIENCE" in current_section or "PROJECTS" in current_section:
-                formatted_line = render_spans_to_html(txt)
-                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{formatted_line}</p>'
-            elif "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
-                if "," in txt:
-                    parts = txt.split(",", 1)
-                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
-                else:
-                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{escaped_txt}</div>'
-            else:
-                formatted_line = render_spans_to_html(txt)
-                paragraphs_html += f'<p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{formatted_line}</p>'
+    # RIGHT SIDE: ANALYSIS OR OPTIMIZED RESUME VIEW
+    with right_col:
+        # Determine score and verdict dynamically based on active tab
+        if active_tab == 'Analysis':
+            score_val = pre.get('ats_score', 78)
+            verdict_text = "Moderate Match" if score_val < 85 else "Great Match!"
+        else:
+            score_val = post.get('ats_score', 93)
+            verdict_text = "Great Match!"
 
-    if in_bullet_list:
-        paragraphs_html += "</ul>"
+        # SPLIT 50/50 DIRECTLY WITHOUT PANEL-CARD BACKGROUND WRAPPER
+        top_card_c1, top_card_c2 = st.columns([1, 1])
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-                background-color: #ffffff;
-                color: #000000;
-                margin: 0;
-                padding: 25px;
-            }}
-            .header-name {{
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: #000000;
-                text-align: center;
-                letter-spacing: 0.5px;
-            }}
-            .header-contact {{
-                font-size: 0.8rem;
-                color: #000000;
-                text-align: center;
-                margin-top: 2px;
-                margin-bottom: 14px;
-            }}
-            .section-title {{
-                color: #1e3a8a;
-                font-size: 10pt;
-                margin-top: 12px;
-                margin-bottom: 6px;
-                border-bottom: 1.5px solid #0f172a;
-                padding-bottom: 2px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header-name">{cand_name}</div>
-        <div class="header-contact">{cand_details}</div>
-        {paragraphs_html}
-    </body>
-    </html>
-    """
-
-def generate_paper_sheet_tailored_html(results):
-    sec2 = results.get("section_2_tailored_content", {})
-    keywords = results.get("post_optimization", {}).get("matching_keywords", [])
-    
-    contact = sec2.get("contact_info", {})
-    cand_name = html.escape(str(contact.get("name", "ROHINI TEMBHURNIKAR")))
-    cand_details = html.escape(str(contact.get("details", "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | Hyderabad | LinkedIn | GitHub")))
-
-    summary = html.escape(str(sec2.get("professional_summary", "")))
-    skills_grouped = sec2.get("core_competencies_grouped", {})
-    exp_list = sec2.get("professional_experience", [])
-    proj_list = sec2.get("projects", [])
-    edu_list = sec2.get("education", [])
-    cert_list = sec2.get("certifications", [])
-
-    for kw in keywords:
-        if len(kw) > 2 and kw in summary:
-            escaped_kw = html.escape(kw)
-            summary = summary.replace(
-                escaped_kw, 
-                f'<mark style="background-color: #fef08a; text-decoration: underline; padding: 1px 4px; border-radius: 3px; font-weight: 600; color: #000000;">{escaped_kw}</mark>'
+        with top_card_c1:
+            selected_tab = st.segmented_control(
+                "View Mode",
+                options=["Analysis", "Optimized Resume"],
+                default=active_tab,
+                label_visibility="collapsed",
+                key="view_segmented_control"
             )
+            if selected_tab and selected_tab != active_tab:
+                st.session_state['active_tab'] = selected_tab
+                st.rerun()
 
-    skills_html = ""
-    for cat, val in skills_grouped.items():
-        skills_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;"><strong>{html.escape(str(cat))}:</strong> <span style="color: #000000;">{html.escape(str(val))}</span></div>'
+        with top_card_c2:
+            st.markdown(f"""
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; height: 100%;">
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap;">
+                        Overall ATS Score <span style="font-size: 1.5rem; color: #16a34a;"><b>{score_val}</b>/100</span> <span style="color: #16a34a; font-weight: 700; font-size: 0.95rem;">({verdict_text})</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-    exp_html = ""
-    for role in exp_list:
-        role_title = html.escape(str(role.get("role_title", "")))
-        exp_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{role_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-        for b in role.get("bullets", []):
-            formatted_b = render_spans_to_html(b)
-            exp_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_b}</li>'
-        exp_html += '</ul>'
+        if active_tab == 'Analysis':
+            # Extract lists generated from comparing Original Uploaded Resume vs JD
+            matching_kws = pre.get('matching_keywords', post.get('matching_keywords', []))
+            missing_kws = pre.get('missing_keywords', post.get('missing_keywords', []))
 
-    proj_html = ""
-    for proj in proj_list:
-        proj_title = html.escape(str(proj.get("project_title", "")))
-        proj_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{proj_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
-        for b in proj.get("bullets", []):
-            formatted_b = render_spans_to_html(b)
-            proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_b}</li>'
-        proj_html += '</ul>'
+            matching_tags = "".join([f'<span class="tag-green">✓ {k}</span>' for k in matching_kws])
+            missing_tags = "".join([f'<span class="tag-red">✕ {k}</span>' for k in missing_kws])
 
-    edu_html = ""
-    for e in edu_list:
-        txt = str(e)
-        if "," in txt:
-            parts = txt.split(",", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
+            # MATCHING KEYWORDS CARD
+            st.markdown(f"""
+            <div class="panel-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Matching Keywords</span>
+                    <span style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(matching_kws)} Matched</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
+                <div>{matching_tags if matching_tags else '<em style="font-size:0.85rem; color:#64748b;">No matching keywords found.</em>'}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # MISSING KEYWORDS CARD (NO HEIGHT/OVERFLOW LIMIT)
+            st.markdown(f"""
+            <div class="panel-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Missing Keywords</span>
+                    <span style="background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">{len(missing_kws)} Missing</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 10px;">Includes Hard Skills, Soft Skills, Methodologies, Processes & Domain Knowledge</div>
+                <div>{missing_tags if missing_tags else '<em style="font-size:0.85rem; color:#15803d;">No missing keywords! Perfect match.</em>'}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            strat_points = fitness.get('alignment_strategy', [
+                "Highlight automated ETL data processing pipelines and record scale.",
+                "Position technical competencies upfront for immediate ATS keyword weighting.",
+                "Ensure bullet points strictly adhere to the Google XYZ impact formula."
+            ])
+            strat_items_html = "".join([f"<li style='margin-bottom: 6px;'>{strat}</li>" for strat in strat_points])
+            
+            st.markdown(f"""
+            <div class="panel-card">
+                <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 10px;">Job Compatibility & Alignment Strategy</div>
+                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
+                    <strong>Role Fitness Summary:</strong> {fitness.get('role_fitness_summary', 'Strong analytical foundation matching core technical requirements.')}
+                </div>
+                <div style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin-bottom: 12px;">
+                    <strong>Gaps & Missing Elements:</strong> {fitness.get('gaps_and_missing_elements', 'Minor gaps in advanced secondary cloud workflows.')}
+                </div>
+                <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; margin-bottom: 6px;">Strategic Alignment Roadmap:</div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: #64748b; line-height: 1.5;">
+                    {strat_items_html}
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
         else:
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
+            paper_html = generate_paper_sheet_tailored_html(res)
+            components.html(paper_html, height=880, scrolling=True)
 
-    cert_html = ""
-    for c in cert_list:
-        txt = str(c)
-        if "," in txt:
-            parts = txt.split(",", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
-        else:
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
-
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-                background-color: #ffffff;
-                color: #000000;
-                margin: 0;
-                padding: 25px;
-            }}
-            .header-name {{
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: #000000;
-                text-align: center;
-                letter-spacing: 0.5px;
-            }}
-            .header-contact {{
-                font-size: 0.8rem;
-                color: #000000;
-                text-align: center;
-                margin-top: 2px;
-                margin-bottom: 14px;
-            }}
-            .section-title {{
-                color: #1e3a8a;
-                font-size: 10pt;
-                margin-top: 12px;
-                margin-bottom: 6px;
-                border-bottom: 1.5px solid #0f172a;
-                padding-bottom: 2px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header-name">{cand_name}</div>
-        <div class="header-contact">{cand_details}</div>
-
-        <div class="section-title">Professional Summary</div>
-        <p style="font-size: 0.86rem; line-height: 1.5; color: #000000; margin-bottom: 12px;">{summary}</p>
-
-        <div class="section-title">Technical Skills</div>
-        <div>{skills_html}</div>
-
-        <div class="section-title">Work Experience</div>
-        <div>{exp_html}</div>
-
-        <div class="section-title">Projects</div>
-        <div>{proj_html}</div>
-
-        <div class="section-title">Education</div>
-        <div>{edu_html}</div>
-
-        <div class="section-title">Certifications</div>
-        <div>{cert_html}</div>
-    </body>
-    </html>
-    """
-
-def generate_new_formatted_docx(results):
-    output = BytesIO()
-    doc = docx.Document()
-    sec2 = results.get("section_2_tailored_content", {})
-
-    section = doc.sections[0]
-    section.page_width = Inches(8.5)
-    section.page_height = Inches(11.0)
-    section.top_margin = Inches(0.5)
-    section.bottom_margin = Inches(0.5)
-    section.left_margin = Inches(0.5)
-    section.right_margin = Inches(0.5)
-
-    contact = sec2.get("contact_info", {})
-    p_name = doc.add_paragraph()
-    p_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_name.paragraph_format.space_before = Pt(0)
-    p_name.paragraph_format.space_after = Pt(1)
-    r_name = p_name.add_run(contact.get("name", "ROHINI TEMBHURNIKAR"))
-    r_name.font.name = "Arial"
-    r_name.font.size = Pt(15)
-    r_name.font.bold = True
-    r_name.font.color.rgb = RGBColor(0, 0, 0)
-
-    p_contact = doc.add_paragraph()
-    p_contact.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_contact.paragraph_format.space_before = Pt(0)
-    p_contact.paragraph_format.space_after = Pt(8)
-    r_contact = p_contact.add_run(contact.get("details", ""))
-    r_contact.font.name = "Arial"
-    r_contact.font.size = Pt(9)
-    r_contact.font.color.rgb = RGBColor(0, 0, 0)
-
-    def add_section_header(title_text):
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(8)
-        p.paragraph_format.space_after = Pt(4)
-        r = p.add_run(title_text.upper())
-        r.font.name = "Arial"
-        r.font.size = Pt(10)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(30, 58, 138)
-        add_bottom_border(p, color_hex="0F172A", size="8")
-        return p
-
-    add_section_header("PROFESSIONAL SUMMARY")
-    p_sum = doc.add_paragraph()
-    p_sum.paragraph_format.space_before = Pt(0)
-    p_sum.paragraph_format.space_after = Pt(6)
-    for part, is_bold in clean_markdown_bold_spans(sec2.get("professional_summary", "")):
-        r_sum = p_sum.add_run(part)
-        r_sum.font.name = "Arial"
-        r_sum.font.size = Pt(9)
-        r_sum.font.bold = is_bold
-        r_sum.font.color.rgb = RGBColor(0, 0, 0)
-
-    add_section_header("TECHNICAL SKILLS")
-    for cat, val in sec2.get("core_competencies_grouped", {}).items():
-        p_sk = doc.add_paragraph()
-        p_sk.paragraph_format.space_before = Pt(0)
-        p_sk.paragraph_format.space_after = Pt(2)
-        r_cat = p_sk.add_run(f"{cat}: ")
-        r_cat.font.name = "Arial"
-        r_cat.font.size = Pt(9)
-        r_cat.font.bold = True
-        r_cat.font.color.rgb = RGBColor(0, 0, 0)
-        r_val = p_sk.add_run(str(val))
-        r_val.font.name = "Arial"
-        r_val.font.size = Pt(9)
-        r_val.font.color.rgb = RGBColor(0, 0, 0)
-
-    add_section_header("WORK EXPERIENCE")
-    for role in sec2.get("professional_experience", []):
-        p_role = doc.add_paragraph()
-        p_role.paragraph_format.space_before = Pt(4)
-        p_role.paragraph_format.space_after = Pt(2)
-        r_role = p_role.add_run(role.get("role_title", "Role"))
-        r_role.font.name = "Arial"
-        r_role.font.size = Pt(9.5)
-        r_role.font.bold = True
-        r_role.font.color.rgb = RGBColor(0, 0, 0)
-        for b in role.get("bullets", []):
-            p_b = doc.add_paragraph(style='List Bullet')
-            p_b.paragraph_format.space_before = Pt(0)
-            p_b.paragraph_format.space_after = Pt(2)
-            for part, is_bold in clean_markdown_bold_spans(b.strip()):
-                r_b = p_b.add_run(part)
-                r_b.font.name = "Arial"
-                r_b.font.size = Pt(9)
-                r_b.font.bold = is_bold
-                r_b.font.color.rgb = RGBColor(0, 0, 0)
-
-    add_section_header("PROJECTS")
-    for proj in sec2.get("projects", []):
-        p_proj = doc.add_paragraph()
-        p_proj.paragraph_format.space_before = Pt(4)
-        p_proj.paragraph_format.space_after = Pt(2)
-        r_proj = p_proj.add_run(proj.get("project_title", "Project"))
-        r_proj.font.name = "Arial"
-        r_proj.font.size = Pt(9.5)
-        r_proj.font.bold = True
-        r_proj.font.color.rgb = RGBColor(0, 0, 0)
-        for b in proj.get("bullets", []):
-            p_b = doc.add_paragraph(style='List Bullet')
-            p_b.paragraph_format.space_before = Pt(0)
-            p_b.paragraph_format.space_after = Pt(2)
-            for part, is_bold in clean_markdown_bold_spans(b.strip()):
-                r_b = p_b.add_run(part)
-                r_b.font.name = "Arial"
-                r_b.font.size = Pt(9)
-                r_b.font.bold = is_bold
-                r_b.font.color.rgb = RGBColor(0, 0, 0)
-
-    add_section_header("EDUCATION")
-    for edu in sec2.get("education", []):
-        p_edu = doc.add_paragraph()
-        p_edu.paragraph_format.space_before = Pt(0)
-        p_edu.paragraph_format.space_after = Pt(2)
-        txt = str(edu)
-        if "," in txt:
-            parts = txt.split(",", 1)
-            r_deg = p_edu.add_run(parts[0].strip())
-            r_deg.font.name = "Arial"
-            r_deg.font.size = Pt(9.5)
-            r_deg.font.bold = True
-            r_deg.font.color.rgb = RGBColor(0, 0, 0)
-            r_rest = p_edu.add_run(f", {parts[1].strip()}")
-            r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9)
-            r_rest.font.color.rgb = RGBColor(0, 0, 0)
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            r_deg = p_edu.add_run(parts[0].strip())
-            r_deg.font.name = "Arial"
-            r_deg.font.size = Pt(9.5)
-            r_deg.font.bold = True
-            r_deg.font.color.rgb = RGBColor(0, 0, 0)
-            r_rest = p_edu.add_run(f" | {parts[1].strip()}")
-            r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9)
-            r_rest.font.color.rgb = RGBColor(0, 0, 0)
-        else:
-            r_deg = p_edu.add_run(txt)
-            r_deg.font.name = "Arial"
-            r_deg.font.size = Pt(9)
-            r_deg.font.color.rgb = RGBColor(0, 0, 0)
-
-    add_section_header("CERTIFICATIONS")
-    for cert in sec2.get("certifications", []):
-        p_cert = doc.add_paragraph()
-        p_cert.paragraph_format.space_before = Pt(0)
-        p_cert.paragraph_format.space_after = Pt(2)
-        txt = str(cert)
-        if "," in txt:
-            parts = txt.split(",", 1)
-            r_cert = p_cert.add_run(parts[0].strip())
-            r_cert.font.name = "Arial"
-            r_cert.font.size = Pt(9.5)
-            r_cert.font.bold = True
-            r_cert.font.color.rgb = RGBColor(0, 0, 0)
-            r_rest = p_cert.add_run(f", {parts[1].strip()}")
-            r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9)
-            r_rest.font.color.rgb = RGBColor(0, 0, 0)
-        elif "|" in txt:
-            parts = txt.split("|", 1)
-            r_cert = p_cert.add_run(parts[0].strip())
-            r_cert.font.name = "Arial"
-            r_cert.font.size = Pt(9.5)
-            r_cert.font.bold = True
-            r_cert.font.color.rgb = RGBColor(0, 0, 0)
-            r_rest = p_cert.add_run(f" | {parts[1].strip()}")
-            r_rest.font.name = "Arial"
-            r_rest.font.size = Pt(9)
-            r_rest.font.color.rgb = RGBColor(0, 0, 0)
-        else:
-            r_cert = p_cert.add_run(txt)
-            r_cert.font.name = "Arial"
-            r_cert.font.size = Pt(9)
-            r_cert.font.color.rgb = RGBColor(0, 0, 0)
-
-    doc.save(output)
-    output.seek(0)
-    return output
+    st.markdown("<br>", unsafe_allow_html=True)
