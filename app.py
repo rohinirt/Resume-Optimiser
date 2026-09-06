@@ -4,7 +4,8 @@ from utils import (
     extract_text_from_file, 
     generate_standard_resume_sheet_html,
     generate_paper_sheet_tailored_html,
-    generate_new_formatted_docx
+    generate_new_formatted_docx,
+    extract_docx_hyperlink_map
 )
 from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
@@ -230,8 +231,16 @@ elif st.session_state['page'] == 'results':
             </div>
         """, unsafe_allow_html=True)
 
+    resume_bytes_for_links = st.session_state.get('resume_bytes', b"")
+    file_type_for_links = st.session_state.get('file_type', 'pdf')
+    contact_hyperlink_map = (
+        extract_docx_hyperlink_map(resume_bytes_for_links)
+        if file_type_for_links == 'docx' and resume_bytes_for_links
+        else {}
+    )
+
     with col_dl:
-        updated_docx = generate_new_formatted_docx(res)
+        updated_docx = generate_new_formatted_docx(res, contact_hyperlink_map=contact_hyperlink_map)
         filename = res.get("suggested_filename", "Tailored_Resume") + ".docx"
         st.download_button(
             label="Download",
@@ -363,7 +372,7 @@ elif st.session_state['page'] == 'results':
             """, unsafe_allow_html=True)
 
         else:
-            paper_html = generate_paper_sheet_tailored_html(res)
+            paper_html = generate_paper_sheet_tailored_html(res, contact_hyperlink_map=contact_hyperlink_map)
             components.html(paper_html, height=880, scrolling=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
