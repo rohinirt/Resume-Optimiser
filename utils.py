@@ -80,6 +80,7 @@ PROJECT_LINKS = {
     "Pune Uber Trips Analysis": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/UberDashboard_17397212991330/Dashboard1",
     "Bike Sales in Europe": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/BikeSalesinEurope_17800428612320/Overview",
     "Amazon Stock Market Trends": "https://public.tableau.com/app/profile/rohini.tembhurnikar/viz/AmazonStockMarketTrends_17800442486380/Dashboard1",
+    "HR Employee Attrition Dashboard": "https://lookerstudio.google.com/u/0/reporting/f193c501-d56b-41e1-8c03-4a6c7df4ed82/page/p_gc4ab9skvd",
     "Instacart Market Basket Analysis": "https://github.com/rohinirt/SQL_Projects/tree/main/Instacart_Market_Basket_Analysis",
     "Customer Segmentation": "https://github.com/rohinirt/SQL_Projects/tree/main/Customer-Segmentation",
     "Fraud Detection Analysis": "https://github.com/rohinirt/Fraud_Detection",
@@ -272,8 +273,11 @@ def add_docx_hyperlink(paragraph, text, url, size=CONTACT_SIZE, bold=False):
     color.set(qn("w:val"), "000000")
     rPr.append(color)
 
-    # Do not force underline. The reference resume's link appearance is
-    # controlled by the hyperlink itself/Word theme; keep text black.
+    # The reference resume displays hyperlinks underlined.
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    rPr.append(underline)
+
     if bold:
         b = OxmlElement("w:b")
         rPr.append(b)
@@ -313,22 +317,23 @@ def add_resume_bullet_docx(doc, text):
 
 
 def add_section_header_docx(doc, title):
-    """11 pt black uppercase heading with a black bottom rule."""
+    """11 pt bold, black, uppercase, underlined section heading."""
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(4)
     p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.line_spacing = 1.0
     p.paragraph_format.keep_with_next = True
 
-    add_docx_run(
+    run = add_docx_run(
         p,
         str(title).upper(),
         size=HEADLINE_SIZE,
         bold=True,
     )
+    run.underline = True
 
-    add_bottom_border(p, color_hex="000000", size="8", space="2")
     return p
+
 
 
 def add_contact_line_docx(doc, contact_details):
@@ -367,10 +372,86 @@ def add_contact_line_docx(doc, contact_details):
     return p
 
 
+
+def _docx_paragraph_is_bullet(paragraph):
+    """
+    Detect Word list formatting. Word list bullets are often stored in
+    numbering properties rather than as a literal bullet character.
+    """
+    style_name = ""
+    try:
+        style_name = paragraph.style.name or ""
+    except Exception:
+        pass
+
+    if "List" in style_name or "Bullet" in style_name:
+        return True
+
+    pPr = paragraph._p.pPr
+    if pPr is not None and pPr.numPr is not None:
+        return True
+
+    return False
+
+
+def _docx_paragraph_to_html(paragraph):
+    """
+    Preserve bold runs and real hyperlinks from the uploaded DOCX.
+    """
+    pieces = []
+
+    for child in paragraph._p:
+        if child.tag == qn("w:hyperlink"):
+            rid = child.get(qn("r:id"))
+            url = None
+            if rid and rid in paragraph.part.rels:
+                url = paragraph.part.rels[rid].target_ref
+
+            link_runs = child.xpath(".//w:r")
+            link_text = ""
+            link_bold = False
+
+            for run_el in link_runs:
+                link_text += "".join(run_el.xpath(".//w:t/text()"))
+                if run_el.xpath(".//w:b"):
+                    link_bold = True
+
+            if url:
+                style = "font-weight:700;" if link_bold else ""
+                pieces.append(
+                    f'<a href="{html.escape(url, quote=True)}" '
+                    f'target="_blank" rel="noopener noreferrer" '
+                    f'style="color:#000000;text-decoration:underline;{style}">'
+                    f'{html.escape(link_text)}</a>'
+                )
+            else:
+                pieces.append(html.escape(link_text))
+
+        elif child.tag == qn("w:r"):
+            texts = child.xpath(".//w:t/text()")
+            if not texts:
+                continue
+
+            value = "".join(texts)
+            run_text = html.escape(value)
+
+            if child.xpath(".//w:b"):
+                run_text = f"<strong>{run_text}</strong>"
+
+            pieces.append(run_text)
+
+    return "".join(pieces) if pieces else html.escape(paragraph.text or "")
+
+
 def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_docx_file=False):
     """
-    Original resume preview.
-    When the uploaded file is DOCX, preserve its actual hyperlink targets.
+    Render the uploaded resume as an A4-ratio preview.
+
+    For DOCX input, preserve:
+    - real hyperlinks
+    - bold runs
+    - underlined section headings
+    - Word list/numbering bullets
     """
     paragraphs = []
 
@@ -378,7 +459,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
         try:
             document = docx.Document(BytesIO(content_text_or_bytes))
             for p in document.paragraphs:
-                if p.text.strip():
+                if p.text.strip() or _docx_paragraph_is_bullet(p):
                     paragraphs.append(("docx", p))
         except Exception:
             paragraphs = []
@@ -394,8 +475,6 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     if not paragraphs:
         return "<p>No content found.</p>"
 
-    # For the uploaded reference resume, the first three lines are:
-    # name / Data Analyst / contact.
     first_text = paragraphs[0][1].text if paragraphs[0][0] == "docx" else paragraphs[0][1]
     second_text = paragraphs[1][1].text if len(paragraphs) > 1 and paragraphs[1][0] == "docx" else (
         paragraphs[1][1] if len(paragraphs) > 1 else ""
@@ -406,77 +485,59 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
 
     body = paragraphs[3:] if len(paragraphs) > 3 else []
 
-    def paragraph_to_html(item, default_size=BODY_SIZE):
+    def paragraph_to_html(item):
         kind, value = item
-
         if kind == "text":
             return render_spans_to_html(value)
+        return _docx_paragraph_to_html(value)
 
-        p = value
-        pieces = []
-
-        # Walk direct children so hyperlinks are not lost.
-        for child in p._p:
-            if child.tag == qn("w:hyperlink"):
-                rid = child.get(qn("r:id"))
-                url = None
-                if rid and rid in p.part.rels:
-                    url = p.part.rels[rid].target_ref
-
-                link_text = "".join(child.xpath(".//w:t/text()"))
-                if url:
-                    pieces.append(
-                        f'<a href="{html.escape(url, quote=True)}" '
-                        f'target="_blank" rel="noopener noreferrer">'
-                        f'{html.escape(link_text)}</a>'
-                    )
-                else:
-                    pieces.append(html.escape(link_text))
-
-            elif child.tag == qn("w:r"):
-                texts = child.xpath(".//w:t/text()")
-                if texts:
-                    pieces.append(html.escape("".join(texts)))
-
-        return "".join(pieces) if pieces else html.escape(p.text)
+    # Render the contact line with the actual hyperlinks from the uploaded DOCX.
+    if paragraphs and paragraphs[2][0] == "docx":
+        contact_html = _docx_paragraph_to_html(paragraphs[2][1])
+    else:
+        contact_html = html.escape(third_text)
 
     body_html = ""
     current_section = ""
 
-    for item in body:
-        text = item[1].text if item[0] == "docx" else str(item[1])
-        stripped = text.strip()
+    section_names = {
+        "PROFESSIONAL SUMMARY",
+        "EXPERIENCE",
+        "PROJECTS",
+        "SKILLS",
+        "EDUCATION",
+        "CERTIFICATIONS",
+    }
 
-        if not stripped:
+    for item in body:
+        text_value = item[1].text if item[0] == "docx" else str(item[1])
+        stripped = text_value.strip()
+
+        if not stripped and not (item[0] == "docx" and _docx_paragraph_is_bullet(item[1])):
             continue
 
-        if stripped.isupper() and len(stripped) < 45:
-            current_section = stripped
-            body_html += f'<div class="section-title">{html.escape(stripped)}</div>'
+        upper = stripped.upper()
+
+        if upper in section_names:
+            current_section = upper
+            body_html += f'<div class="section-title">{html.escape(upper)}</div>'
             continue
 
         rendered = paragraph_to_html(item)
-
         is_bullet = (
-            stripped.startswith("•")
-            or stripped.startswith("")
-            or stripped.startswith("-")
-            or stripped.startswith("*")
+            (item[0] == "docx" and _docx_paragraph_is_bullet(item[1]))
+            or stripped.startswith(("•", "", "-", "*"))
         )
 
         if is_bullet:
-            clean = re.sub(r"^[•*\\-]\s*", "", stripped)
-            rendered = paragraph_to_html(("text", clean)) if item[0] == "text" else rendered
-            body_html += f'<div class="bullet">{rendered}</div>'
-
-        elif current_section in ("EXPERIENCE", "PROJECTS") and (
-            " | " in stripped
-            or (
-                item[0] == "docx"
-                and any(r.bold for r in item[1].runs)
-                and len(stripped) < 130
+            # Word stores the bullet in numbering properties, not paragraph.text.
+            # Add the visual bullet explicitly in HTML.
+            body_html += (
+                f'<div class="bullet"><span class="bullet-mark">•</span>'
+                f'{rendered}</div>'
             )
-        ):
+
+        elif current_section in ("EXPERIENCE", "PROJECTS"):
             body_html += f'<div class="entry-title">{rendered}</div>'
 
         else:
@@ -499,17 +560,19 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     }}
 
     body {{
-        font-family: Calibri, Carlito, sans-serif;
+        font-family: Calibri, sans-serif;
         color: #000000;
         font-size: 9pt;
     }}
 
     .resume-page {{
-        width: 8.268in;
-        min-height: 11.693in;
+        width: 100%;
+        max-width: 210mm;
+        aspect-ratio: 210 / 297;
         padding: 0.6in 1cm 1cm 1cm;
         margin: 0 auto;
         background: #ffffff;
+        overflow: hidden;
     }}
 
     .header-name {{
@@ -524,7 +587,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
         font-size: 10pt;
         font-weight: 700;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.1;
         margin: 0;
     }}
 
@@ -532,26 +595,25 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
         font-size: 9pt;
         font-weight: 400;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.1;
         margin: 0;
     }}
 
     .header-contact a,
     a {{
         color: #000000;
-        text-decoration: none;
+        text-decoration: underline;
     }}
 
     .section-title {{
         font-size: 11pt;
         font-weight: 700;
-        line-height: 1.0;
+        line-height: 1;
         margin-top: 4pt;
         margin-bottom: 2pt;
-        padding-bottom: 2pt;
-        border-bottom: 1px solid #000000;
         color: #000000;
         text-transform: uppercase;
+        text-decoration: underline;
     }}
 
     .body-text {{
@@ -563,9 +625,9 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
 
     .entry-title {{
         font-size: 10pt;
-        line-height: 1.15;
+        line-height: 1.1;
         font-weight: 700;
-        margin: 2pt 0 0 0;
+        margin: 1pt 0 0 0;
         color: #000000;
     }}
 
@@ -573,9 +635,16 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
         font-size: 9pt;
         line-height: 1.15;
         margin: 0;
-        padding-left: 13px;
-        text-indent: -9px;
+        padding-left: 12px;
+        text-indent: 0;
         color: #000000;
+    }}
+
+    .bullet-mark {{
+        display: inline-block;
+        width: 9px;
+        margin-left: -12px;
+        margin-right: 3px;
     }}
 
     strong {{
@@ -587,12 +656,103 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
 <div class="resume-page">
     <div class="header-name">{html.escape(first_text)}</div>
     <div class="header-title">{html.escape(second_text)}</div>
-    <div class="header-contact">{html.escape(third_text)}</div>
+    <div class="header-contact">{contact_html}</div>
     {body_html}
 </div>
 </body>
 </html>
 """
+
+
+
+def render_summary_with_keywords_html(summary, keywords):
+    """
+    Render existing **bold** spans and additionally bold matching JD keywords.
+    This does not add highlighting/backgrounds; it only uses normal bold text.
+    """
+    pieces = clean_markdown_bold_spans(str(summary or ""))
+    keywords = sorted(
+        {str(k).strip() for k in (keywords or []) if str(k).strip()},
+        key=len,
+        reverse=True,
+    )
+
+    out = []
+    for part, already_bold in pieces:
+        if not part:
+            continue
+
+        if already_bold or not keywords:
+            escaped = html.escape(part)
+            out.append(f"<strong>{escaped}</strong>" if already_bold else escaped)
+            continue
+
+        # Bold exact keyword phrases, case-insensitively, without changing
+        # punctuation or capitalization.
+        pattern = re.compile(
+            "(" + "|".join(re.escape(k) for k in keywords) + ")",
+            flags=re.IGNORECASE,
+        )
+
+        last = 0
+        for match in pattern.finditer(part):
+            out.append(html.escape(part[last:match.start()]))
+            out.append(f"<strong>{html.escape(match.group(0))}</strong>")
+            last = match.end()
+
+        out.append(html.escape(part[last:]))
+
+    return "".join(out)
+
+
+def add_summary_with_keywords_docx(paragraph, summary, keywords):
+    """
+    Render summary bold markers and JD matching keywords as normal bold text.
+    """
+    pieces = clean_markdown_bold_spans(str(summary or ""))
+    keywords = sorted(
+        {str(k).strip() for k in (keywords or []) if str(k).strip()},
+        key=len,
+        reverse=True,
+    )
+
+    for part, already_bold in pieces:
+        if not part:
+            continue
+
+        if already_bold or not keywords:
+            add_docx_run(paragraph, part, size=BODY_SIZE, bold=already_bold)
+            continue
+
+        pattern = re.compile(
+            "(" + "|".join(re.escape(k) for k in keywords) + ")",
+            flags=re.IGNORECASE,
+        )
+
+        last = 0
+        for match in pattern.finditer(part):
+            if match.start() > last:
+                add_docx_run(
+                    paragraph,
+                    part[last:match.start()],
+                    size=BODY_SIZE,
+                    bold=False,
+                )
+            add_docx_run(
+                paragraph,
+                match.group(0),
+                size=BODY_SIZE,
+                bold=True,
+            )
+            last = match.end()
+
+        if last < len(part):
+            add_docx_run(
+                paragraph,
+                part[last:],
+                size=BODY_SIZE,
+                bold=False,
+            )
 
 
 def _contact_html(contact_details):
@@ -651,7 +811,7 @@ def _project_title_html(project_title):
 
 
 def _project_title_docx(doc, project_title):
-    """Render a project title plus its actual clickable Word Link."""
+    """Render a 10 pt bold project title and an underlined clickable Link."""
     title = str(project_title or "").strip()
 
     cleaned_title = re.sub(
@@ -667,28 +827,117 @@ def _project_title_docx(doc, project_title):
     p.paragraph_format.line_spacing = 1.0
     p.paragraph_format.keep_with_next = True
 
-    add_bold_spans_to_docx(p, cleaned_title, size=ENTRY_TITLE_SIZE)
+    # Reference resume uses a bold 10 pt project name.
+    add_docx_run(p, cleaned_title, size=ENTRY_TITLE_SIZE, bold=True)
 
     url = get_project_url(title)
 
     if url:
-        add_docx_run(p, " | ", size=ENTRY_TITLE_SIZE, bold=True)
-        add_docx_hyperlink(p, "Link", url, size=ENTRY_TITLE_SIZE)
+        add_docx_run(p, " | ", size=BODY_SIZE, bold=False)
+        add_docx_hyperlink(p, "Link", url, size=BODY_SIZE, bold=False)
+
+    return p
+
+
+
+def split_title_and_details(text):
+    """
+    Return (title, details) for education/certification lines.
+
+    Reference resume behavior:
+    - Education: degree name is bold; institution/date are regular.
+    - Certification: certification name is bold; provider/date are regular.
+    """
+    value = str(text or "").strip()
+
+    if "|" in value:
+        first, details = value.split("|", 1)
+        first = first.strip()
+        details = details.strip()
+
+        # Gemini sometimes returns:
+        # "Master of Computer Application, SNDT University Mumbai (80%) | May 2025"
+        # In that form, only the degree/certificate title should be bold.
+        if "," in first:
+            title = first.split(",", 1)[0].strip()
+            remainder = first[len(first.split(",", 1)[0]):].strip()
+            if remainder:
+                details = remainder + " | " + details
+
+            return title, details
+
+        return first, details
+
+    # If there is no pipe, keep the whole line as the title.
+    return value, ""
+
+
+
+def education_html(items):
+    out = ""
+    for item in items or []:
+        title, details = split_title_and_details(item)
+        if details:
+            out += (
+                '<div class="body-text">'
+                f'<strong>{render_spans_to_html(title)}</strong> | '
+                f'{render_spans_to_html(details)}'
+                '</div>'
+            )
+        elif title:
+            out += f'<div class="body-text"><strong>{render_spans_to_html(title)}</strong></div>'
+    return out
+
+
+def certification_html(items):
+    out = ""
+    for item in items or []:
+        title, details = split_title_and_details(item)
+        if details:
+            out += (
+                '<div class="body-text">'
+                f'<strong>{render_spans_to_html(title)}</strong> | '
+                f'{render_spans_to_html(details)}'
+                '</div>'
+            )
+        elif title:
+            out += f'<div class="body-text"><strong>{render_spans_to_html(title)}</strong></div>'
+    return out
+
+
+def add_title_details_docx(doc, text):
+    """
+    Add an education/certification line with its title bolded.
+    """
+    title, details = split_title_and_details(text)
+
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.line_spacing = 1.15
+
+    if title:
+        add_bold_spans_to_docx(p, title, size=BODY_SIZE)
+        # The title itself should be bold even if Gemini omitted **.
+        for run in p.runs:
+            run.bold = True
+
+    if details:
+        add_docx_run(p, " | ", size=BODY_SIZE)
+        add_bold_spans_to_docx(p, details, size=BODY_SIZE)
 
     return p
 
 
 def generate_paper_sheet_tailored_html(results):
     """
-    Optimized resume preview.
-
-    This is deliberately styled from the same specification as
-    generate_new_formatted_docx(), so preview and download use the
-    same typography, spacing, dimensions and hyperlink behavior.
+    Optimized A4 resume preview.
+    Preview order:
+    Summary → Experience → Projects → Skills → Education → Certifications.
     """
-    sec2 = results.get("section_2_tailored_content", {})
+    sec2 = results.get("section_2_tailored_content", {}) or {}
 
-    contact = sec2.get("contact_info", {})
+    contact = sec2.get("contact_info", {}) or {}
     cand_name = str(contact.get("name", "Rohini Tembhurnikar")).strip()
     cand_details = str(
         contact.get(
@@ -699,6 +948,7 @@ def generate_paper_sheet_tailored_html(results):
     ).strip()
 
     summary = str(sec2.get("professional_summary", "")).strip()
+    keywords = results.get("post_optimization", {}).get("matching_keywords", []) or []
     skills_grouped = sec2.get("core_competencies_grouped", {}) or {}
     exp_list = sec2.get("professional_experience", []) or []
     proj_list = sec2.get("projects", []) or []
@@ -710,53 +960,36 @@ def generate_paper_sheet_tailored_html(results):
         skills_html += (
             '<div class="skill-line">'
             f'<strong>{html.escape(str(cat))}:</strong> '
-            f'{html.escape(str(val))}'
+            f'{render_spans_to_html(str(val))}'
             '</div>'
         )
 
     exp_html = ""
     for role in exp_list:
         role_title = str(role.get("role_title", "")).strip()
-
-        exp_html += (
-            f'<div class="entry-title">{render_spans_to_html(role_title)}</div>'
-        )
+        exp_html += f'<div class="entry-title">{render_spans_to_html(role_title)}</div>'
 
         for bullet in role.get("bullets", []) or []:
             clean_bullet = re.sub(r"^[•*\\-]\s*", "", str(bullet).strip())
             exp_html += (
-                f'<div class="bullet">• '
+                f'<div class="bullet"><span class="bullet-mark">•</span>'
                 f'{render_spans_to_html(clean_bullet)}</div>'
             )
 
     proj_html = ""
     for proj in proj_list:
         proj_title = str(proj.get("project_title", "")).strip()
-
-        proj_html += (
-            f'<div class="entry-title">{_project_title_html(proj_title)}</div>'
-        )
+        proj_html += f'<div class="entry-title">{_project_title_html(proj_title)}</div>'
 
         for bullet in proj.get("bullets", []) or []:
             clean_bullet = re.sub(r"^[•*\\-]\s*", "", str(bullet).strip())
             proj_html += (
-                f'<div class="bullet">• '
+                f'<div class="bullet"><span class="bullet-mark">•</span>'
                 f'{render_spans_to_html(clean_bullet)}</div>'
             )
 
-    def simple_lines(items):
-        out = ""
-        for item in items:
-            txt = str(item).strip()
-            if not txt:
-                continue
-
-            # Preserve bolding if Gemini returned markdown.
-            out += f'<div class="body-text">{render_spans_to_html(txt)}</div>'
-        return out
-
-    edu_html = simple_lines(edu_list)
-    cert_html = simple_lines(cert_list)
+    edu_html = education_html(edu_list)
+    cert_html = certification_html(cert_list)
 
     return f"""
 <!DOCTYPE html>
@@ -775,17 +1008,19 @@ def generate_paper_sheet_tailored_html(results):
     }}
 
     body {{
-        font-family: Calibri, Carlito, sans-serif;
+        font-family: Calibri, sans-serif;
         color: #000000;
         font-size: 9pt;
     }}
 
     .resume-page {{
-        width: 8.268in;
-        min-height: 11.693in;
+        width: 100%;
+        max-width: 210mm;
+        aspect-ratio: 210 / 297;
         padding: 0.6in 1cm 1cm 1cm;
         margin: 0 auto;
         background: #ffffff;
+        overflow: hidden;
     }}
 
     .header-name {{
@@ -800,7 +1035,7 @@ def generate_paper_sheet_tailored_html(results):
         font-size: 10pt;
         font-weight: 700;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.1;
         margin: 0;
     }}
 
@@ -808,7 +1043,7 @@ def generate_paper_sheet_tailored_html(results):
         font-size: 9pt;
         font-weight: 400;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.1;
         margin: 0;
     }}
 
@@ -816,19 +1051,18 @@ def generate_paper_sheet_tailored_html(results):
     .project-link,
     a {{
         color: #000000;
-        text-decoration: none;
+        text-decoration: underline;
     }}
 
     .section-title {{
         font-size: 11pt;
         font-weight: 700;
-        line-height: 1.0;
+        line-height: 1;
         margin-top: 4pt;
         margin-bottom: 2pt;
-        padding-bottom: 2pt;
-        border-bottom: 1px solid #000000;
         color: #000000;
         text-transform: uppercase;
+        text-decoration: underline;
     }}
 
     .body-text {{
@@ -847,9 +1081,9 @@ def generate_paper_sheet_tailored_html(results):
 
     .entry-title {{
         font-size: 10pt;
-        line-height: 1.15;
+        line-height: 1.1;
         font-weight: 700;
-        margin: 2pt 0 0 0;
+        margin: 1pt 0 0 0;
         color: #000000;
     }}
 
@@ -857,13 +1091,21 @@ def generate_paper_sheet_tailored_html(results):
         font-size: 9pt;
         line-height: 1.15;
         margin: 0;
-        padding-left: 13px;
-        text-indent: -9px;
+        padding-left: 12px;
+        text-indent: 0;
         color: #000000;
     }}
 
-    .separator {{
-        font-weight: 700;
+    .bullet-mark {{
+        display: inline-block;
+        width: 9px;
+        margin-left: -12px;
+        margin-right: 3px;
+    }}
+
+    .project-link {{
+        font-size: 9pt;
+        font-weight: 400;
     }}
 
     strong {{
@@ -879,16 +1121,16 @@ def generate_paper_sheet_tailored_html(results):
     <div class="header-contact">{_contact_html(cand_details)}</div>
 
     <div class="section-title">PROFESSIONAL SUMMARY</div>
-    <div class="body-text">{render_spans_to_html(summary)}</div>
-
-    <div class="section-title">SKILLS</div>
-    {skills_html}
+    <div class="body-text">{render_summary_with_keywords_html(summary, keywords)}</div>
 
     <div class="section-title">EXPERIENCE</div>
     {exp_html}
 
     <div class="section-title">PROJECTS</div>
     {proj_html}
+
+    <div class="section-title">SKILLS</div>
+    {skills_html}
 
     <div class="section-title">EDUCATION</div>
     {edu_html}
@@ -900,6 +1142,7 @@ def generate_paper_sheet_tailored_html(results):
 </body>
 </html>
 """
+
 
 
 def _set_document_defaults(doc):
@@ -990,25 +1233,11 @@ def generate_new_formatted_docx(results):
     p_summary.paragraph_format.space_after = Pt(0)
     p_summary.paragraph_format.line_spacing = 1.15
 
-    add_bold_spans_to_docx(
+    add_summary_with_keywords_docx(
         p_summary,
         sec2.get("professional_summary", ""),
-        size=BODY_SIZE,
+        results.get("post_optimization", {}).get("matching_keywords", []) or [],
     )
-
-    # --------------------------------------------------------
-    # SKILLS
-    # --------------------------------------------------------
-    add_section_header_docx(doc, "SKILLS")
-
-    for cat, val in (sec2.get("core_competencies_grouped", {}) or {}).items():
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
-        p.paragraph_format.line_spacing = 1.15
-
-        add_docx_run(p, f"{cat}: ", size=BODY_SIZE, bold=True)
-        add_docx_run(p, str(val), size=BODY_SIZE)
 
     # --------------------------------------------------------
     # EXPERIENCE
@@ -1022,10 +1251,11 @@ def generate_new_formatted_docx(results):
         p_role.paragraph_format.line_spacing = 1.0
         p_role.paragraph_format.keep_with_next = True
 
-        add_bold_spans_to_docx(
+        add_docx_run(
             p_role,
-            role.get("role_title", "Role"),
+            str(role.get("role_title", "Role")).strip(),
             size=ENTRY_TITLE_SIZE,
+            bold=True,
         )
 
         for bullet in role.get("bullets", []) or []:
@@ -1046,17 +1276,26 @@ def generate_new_formatted_docx(results):
             add_resume_bullet_docx(doc, bullet)
 
     # --------------------------------------------------------
-    # EDUCATION
+    # SKILLS
     # --------------------------------------------------------
-    add_section_header_docx(doc, "EDUCATION")
+    add_section_header_docx(doc, "SKILLS")
 
-    for edu in sec2.get("education", []) or []:
+    for cat, val in (sec2.get("core_competencies_grouped", {}) or {}).items():
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         p.paragraph_format.line_spacing = 1.15
 
-        add_bold_spans_to_docx(p, str(edu), size=BODY_SIZE)
+        add_docx_run(p, f"{cat}: ", size=BODY_SIZE, bold=True)
+        add_docx_run(p, str(val), size=BODY_SIZE)
+
+    # --------------------------------------------------------
+    # EDUCATION
+    # --------------------------------------------------------
+    add_section_header_docx(doc, "EDUCATION")
+
+    for edu in sec2.get("education", []) or []:
+        add_title_details_docx(doc, edu)
 
     # --------------------------------------------------------
     # CERTIFICATIONS
@@ -1064,12 +1303,7 @@ def generate_new_formatted_docx(results):
     add_section_header_docx(doc, "CERTIFICATIONS")
 
     for cert in sec2.get("certifications", []) or []:
-        p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(0)
-        p.paragraph_format.line_spacing = 1.15
-
-        add_bold_spans_to_docx(p, str(cert), size=BODY_SIZE)
+        add_title_details_docx(doc, cert)
 
     doc.save(output)
     output.seek(0)
