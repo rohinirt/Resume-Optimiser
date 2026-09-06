@@ -274,7 +274,7 @@ def fetch_real_web_salary(company_name, job_title):
 
     try:
         response = _generate_with_fallback(
-            ['gemini-3.6-flash', 'gemini-2.5-flash'],
+            ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'],
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
