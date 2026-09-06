@@ -8,6 +8,49 @@ from google.genai import types, errors
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
+def _extract_retry_delay(error, default=2.0):
+    """Pull Google's suggested retryDelay (e.g. '49s') out of a 429 error body, if present."""
+    try:
+        details = getattr(error, "details", None) or {}
+        for d in details.get("details", []) if isinstance(details, dict) else []:
+            if d.get("@type", "").endswith("RetryInfo"):
+                delay_str = d.get("retryDelay", "")
+                return float(delay_str.rstrip("s")) if delay_str else default
+    except Exception:
+        pass
+    return default
+
+def _generate_with_fallback(models_to_try, contents, config, max_retries_per_model=1):
+    """
+    Try each model in order. On 429 (quota exhausted) or 503 (overloaded) or 404
+    (model not found/available), fall back to the next model in the list rather
+    than failing outright. Respects the server's suggested retryDelay when given.
+    """
+    last_error = None
+    for model_name in models_to_try:
+        attempts = 0
+        while attempts <= max_retries_per_model:
+            try:
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+            except errors.APIError as e:
+                last_error = e
+                if e.code in (429, 503, 404):
+                    # 429 = quota exhausted, 503 = overloaded, 404 = model unavailable.
+                    # Give a quota-exhausted model one short wait/retry, then move on
+                    # to the next model in the fallback list rather than looping forever
+                    # on a model whose daily quota is already spent.
+                    if attempts < max_retries_per_model:
+                        time.sleep(_extract_retry_delay(e))
+                        attempts += 1
+                        continue
+                    break
+                raise e
+    raise last_error or Exception("All configured Gemini models failed.")
+
 # EXACT ORIGINAL SYSTEM INSTRUCTIONS (UNTOUCHED)
 SYSTEM_INSTRUCTION = """
 You are a Principal Data Analytics Hiring Manager and Elite ATS Optimization Specialist.
@@ -170,24 +213,24 @@ def analyze_and_optimize_resume(master_resume_text, projects_text, experience_te
 
     models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
 
-    for model_name in models_to_try:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=user_input,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    response_mime_type="application/json"
-                )
+    try:
+        response = _generate_with_fallback(
+            models_to_try,
+            contents=user_input,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
+                response_mime_type="application/json"
+            ),
+        )
+        return json.loads(response.text)
+    except errors.APIError as e:
+        if e.code == 429:
+            raise Exception(
+                "All available Gemini models have hit their request quota for now "
+                "(free-tier daily limit reached). Please try again later, or upgrade "
+                "your Google AI Studio plan for higher limits."
             )
-            return json.loads(response.text)
-        except errors.APIError as e:
-            if e.code == 503 or e.code == 404:
-                time.sleep(1.5)
-                continue
-            raise e
-
-    raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
+        raise Exception("Google AI models are currently busy or unavailable. Please try again in a few moments.")
 
 def fetch_real_web_salary(company_name, job_title):
     """
@@ -206,13 +249,13 @@ def fetch_real_web_salary(company_name, job_title):
     """
 
     try:
-        response = client.models.generate_content(
-            model='gemini-3.6-flash',
+        response = _generate_with_fallback(
+            ['gemini-3.6-flash', 'gemini-2.5-flash'],
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
                 temperature=0.1
-            )
+            ),
         )
         return response.text.strip()
     except Exception:
