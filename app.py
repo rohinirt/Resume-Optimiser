@@ -193,7 +193,7 @@ if st.session_state['page'] == 'landing':
     with uc1:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
         if st.session_state.get('saved_resume_name'):
-            st.caption(f"Current: {st.session_state['saved_resume_name']}")
+            # st.caption(f"Current: {st.session_state['saved_resume_name']}")
         uploaded_resume = st.file_uploader(
             "Replace Resume (.pdf / .docx)",
             type=["pdf", "docx"],
