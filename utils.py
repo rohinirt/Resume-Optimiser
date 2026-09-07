@@ -134,17 +134,28 @@ def render_contact_line_html(details_text, hyperlink_map):
     Turns a plain '(+91) ... | LinkedIn | GitHub | Portfolio | Tableau' string
     into HTML where any segment matching a known hyperlink's display text
     becomes a real, underlined, blue <a> tag using that hyperlink's real URL.
+
+    Robust to the model echoing back 'LinkedIn (https://...)' instead of a
+    clean 'LinkedIn' label: matches by substring against known labels (longest
+    first) and always renders just the clean label as the link text, never
+    whatever extra text/URL the model tacked on.
     """
     if not details_text:
         return ""
     segments = [seg.strip() for seg in details_text.split("|")]
+    sorted_labels = sorted(hyperlink_map.keys(), key=len, reverse=True)
     out_segments = []
     for seg in segments:
-        url = hyperlink_map.get(seg)
-        if url:
+        matched_label = None
+        for label in sorted_labels:
+            if label and label.lower() in seg.lower():
+                matched_label = label
+                break
+        if matched_label:
+            url = hyperlink_map[matched_label]
             out_segments.append(
                 f'<a href="{html.escape(url)}" target="_blank" '
-                f'style="color:#0563C1; text-decoration: underline;">{html.escape(seg)}</a>'
+                f'style="color:#0563C1; text-decoration: underline;">{html.escape(matched_label)}</a>'
             )
         else:
             out_segments.append(html.escape(seg))
@@ -263,11 +274,11 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
                 paragraphs_html += f'<div style="margin-bottom: 4px; font-size: 0.86rem; color: #000000;">{formatted_line}</div>'
             elif "EXPERIENCE" in current_section or "PROJECTS" in current_section:
                 formatted_line = render_spans_to_html(txt)
-                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{formatted_line}</p>'
+                paragraphs_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 10pt; margin-top: 10px;">{formatted_line}</p>'
             elif "EDUCATION" in current_section or "CERTIFICATIONS" in current_section:
                 if "," in txt:
                     parts = txt.split(",", 1)
-                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
+                    paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 10pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
                 else:
                     paragraphs_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{escaped_txt}</div>'
             else:
@@ -312,7 +323,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
             }}
             .section-title {{
                 color: #000000;
-                font-size: 10pt;
+                font-size: 11pt;
                 margin-top: 12px;
                 margin-bottom: 6px;
                 font-weight: 700;
@@ -341,7 +352,7 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
     raw_details = str(contact.get("details", "(+91) 8010132326 | rohinitembhurnikar3@gmail.com | Hyderabad | LinkedIn | GitHub"))
     cand_details = render_contact_line_html(raw_details, contact_hyperlink_map)
 
-    summary = html.escape(str(sec2.get("professional_summary", "")))
+    summary = render_spans_to_html(sec2.get("professional_summary", ""))
     skills_grouped = sec2.get("core_competencies_grouped", {})
     exp_list = sec2.get("professional_experience", [])
     proj_list = sec2.get("projects", [])
@@ -363,7 +374,7 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
     exp_html = ""
     for role in exp_list:
         role_title = html.escape(str(role.get("role_title", "")))
-        exp_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{role_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
+        exp_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 10pt; margin-top: 10px;">{role_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
         for b in role.get("bullets", []):
             formatted_b = render_spans_to_html(b)
             exp_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_b}</li>'
@@ -379,7 +390,7 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
                 f' | <a href="{html.escape(proj_link)}" target="_blank" '
                 f'style="color:#0563C1; text-decoration: underline; font-weight: 700;">{link_label}</a>'
             )
-        proj_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 0.92rem; margin-top: 10px;">{proj_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
+        proj_html += f'<p style="font-weight: 700; color: #000000; margin-bottom: 2px; font-size: 10pt; margin-top: 10px;">{proj_title}</p><ul style="margin-top: 2px; margin-bottom: 8px; padding-left: 18px; font-size: 0.86rem; line-height: 1.5; color: #000000;">'
         for b in proj.get("bullets", []):
             formatted_b = render_spans_to_html(b)
             proj_html += f'<li style="margin-bottom: 4px; color: #000000;">{formatted_b}</li>'
@@ -390,10 +401,10 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
         txt = str(e)
         if "," in txt:
             parts = txt.split(",", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
+            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 10pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
         elif "|" in txt:
             parts = txt.split("|", 1)
-            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
+            edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 10pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
         else:
             edu_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
 
@@ -402,10 +413,10 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
         txt = str(c)
         if "," in txt:
             parts = txt.split(",", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
+            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 10pt;">{html.escape(parts[0].strip())}</strong>, {html.escape(parts[1].strip())}</div>'
         elif "|" in txt:
             parts = txt.split("|", 1)
-            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 9.5pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
+            cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;"><strong style="font-size: 10pt;">{html.escape(parts[0].strip())}</strong> | {html.escape(parts[1].strip())}</div>'
         else:
             cert_html += f'<div style="font-size: 0.86rem; margin-bottom: 3px; color: #000000;">{html.escape(txt)}</div>'
 
@@ -437,7 +448,7 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
             }}
             .section-title {{
                 color: #000000;
-                font-size: 10pt;
+                font-size: 11pt;
                 margin-top: 12px;
                 margin-bottom: 6px;
                 font-weight: 700;
@@ -509,10 +520,14 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
             r_sep.font.name = BODY_FONT
             r_sep.font.size = Pt(9)
             r_sep.font.color.rgb = RGBColor(0, 0, 0)
-        url = contact_hyperlink_map.get(seg)
-        if url:
-            add_hyperlink_run(p_contact, seg, url, font_name=BODY_FONT, font_size=9,
-                               color_hex="0563C1", underline=True)
+        matched_label = None
+        for label in sorted(contact_hyperlink_map.keys(), key=len, reverse=True):
+            if label and label.lower() in seg.lower():
+                matched_label = label
+                break
+        if matched_label:
+            add_hyperlink_run(p_contact, matched_label, contact_hyperlink_map[matched_label],
+                               font_name=BODY_FONT, font_size=9, color_hex="0563C1", underline=True)
         else:
             r_seg = p_contact.add_run(seg)
             r_seg.font.name = BODY_FONT
@@ -525,7 +540,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
         p.paragraph_format.space_after = Pt(4)
         r = p.add_run(title_text.upper())
         r.font.name = BODY_FONT
-        r.font.size = Pt(10)
+        r.font.size = Pt(11)
         r.font.bold = True
         r.font.underline = True
         r.font.color.rgb = RGBColor(0, 0, 0)
@@ -549,7 +564,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
         p_role.paragraph_format.space_after = Pt(2)
         r_role = p_role.add_run(role.get("role_title", "Role"))
         r_role.font.name = BODY_FONT
-        r_role.font.size = Pt(9.5)
+        r_role.font.size = Pt(10)
         r_role.font.bold = True
         r_role.font.color.rgb = RGBColor(0, 0, 0)
         for b in role.get("bullets", []):
@@ -570,14 +585,14 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
         p_proj.paragraph_format.space_after = Pt(2)
         r_proj = p_proj.add_run(proj.get("project_title", "Project"))
         r_proj.font.name = BODY_FONT
-        r_proj.font.size = Pt(9.5)
+        r_proj.font.size = Pt(10)
         r_proj.font.bold = True
         r_proj.font.color.rgb = RGBColor(0, 0, 0)
         proj_link = (proj.get("project_link") or "").strip()
         if proj_link:
             r_sep = p_proj.add_run(" | ")
             r_sep.font.name = BODY_FONT
-            r_sep.font.size = Pt(9.5)
+            r_sep.font.size = Pt(10)
             r_sep.font.color.rgb = RGBColor(0, 0, 0)
             link_label = proj.get("project_link_label") or "Link"
             add_hyperlink_run(p_proj, link_label, proj_link, font_name=BODY_FONT,
@@ -618,7 +633,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
             parts = txt.split(",", 1)
             r_deg = p_edu.add_run(parts[0].strip())
             r_deg.font.name = BODY_FONT
-            r_deg.font.size = Pt(9.5)
+            r_deg.font.size = Pt(10)
             r_deg.font.bold = True
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_edu.add_run(f", {parts[1].strip()}")
@@ -629,7 +644,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
             parts = txt.split("|", 1)
             r_deg = p_edu.add_run(parts[0].strip())
             r_deg.font.name = BODY_FONT
-            r_deg.font.size = Pt(9.5)
+            r_deg.font.size = Pt(10)
             r_deg.font.bold = True
             r_deg.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_edu.add_run(f" | {parts[1].strip()}")
@@ -652,7 +667,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
             parts = txt.split(",", 1)
             r_cert = p_cert.add_run(parts[0].strip())
             r_cert.font.name = BODY_FONT
-            r_cert.font.size = Pt(9.5)
+            r_cert.font.size = Pt(10)
             r_cert.font.bold = True
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_cert.add_run(f", {parts[1].strip()}")
@@ -663,7 +678,7 @@ def generate_new_formatted_docx(results, contact_hyperlink_map=None):
             parts = txt.split("|", 1)
             r_cert = p_cert.add_run(parts[0].strip())
             r_cert.font.name = BODY_FONT
-            r_cert.font.size = Pt(9.5)
+            r_cert.font.size = Pt(10)
             r_cert.font.bold = True
             r_cert.font.color.rgb = RGBColor(0, 0, 0)
             r_rest = p_cert.add_run(f" | {parts[1].strip()}")
