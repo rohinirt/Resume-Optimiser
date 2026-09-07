@@ -115,10 +115,17 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - Use ONLY facts, tools, metrics, and experiences present in the provided files. Do NOT invent companies, metrics, or certifications.
    - This constraint takes priority over rules 2 and 3 whenever they would otherwise require inventing a number — see METRIC INTEGRITY RULE.
 
-# 7. STRICT ONE-PAGE (A4) CONSTRAINT WITH CONCRETE BUDGET:
-#    - The rewritten resume MUST fit on exactly ONE A4 page.
-#    - Enforce this budget:  maximum 2 bullets per project (each bullet 15-25 words), professional_summary 2-3 sentences (max 55 words), total content across all sections in section_2_tailored_content should not exceed approximately 500 words.
-#    - Prioritize the highest-impact, most JD-relevant bullets when trimming is needed.
+7. CONTACT LINE FORMAT:
+   - "contact_info.details" must contain ONLY plain, pipe-separated label text exactly as it appears in the Master Resume header (e.g. "(+91) 8010132326 | name@email.com | Hyderabad | LinkedIn | GitHub | Portfolio | Tableau").
+   - Do NOT append the parenthetical URL you see next to link labels in the extracted source text (e.g. never output "LinkedIn (https://...)") — the application attaches the real hyperlink automatically from the original file. Any URL text in this field is a formatting error.
+   - The ONLY place a URL should ever appear in your JSON output is the "project_link" field described in rule 3.
+
+8. ONE-PAGE (A4) LENGTH TARGET:
+   - Aim to fit the rewritten resume on approximately one A4 page, but content completeness and JD-coverage take priority over hitting an exact page count.
+   - EXPERIENCE BULLET COUNT: For each role, include as many bullets as needed to cover the JD's required skills/responsibilities — this should generally match how many bullets that role has in the Master Resume (typically 3-5), not an arbitrary fixed number. Only trim below the source count if truly redundant or clearly irrelevant to the JD; never cut below 3 bullets for a role that has 3+ in the source unless the JD is extremely narrow.
+   - PROJECT BULLET COUNT: 2-3 bullets per selected project (each bullet 15-25 words).
+   - professional_summary: 2-3 sentences (max 55 words).
+   - Keep total content across all sections in section_2_tailored_content within approximately 650-750 words to stay close to one page — but do not drop JD-relevant bullets just to hit a lower word count. If the honest content genuinely runs past one page, prioritize the highest-impact, most JD-relevant bullets when trimming, and trim length/wording per bullet before cutting whole bullets.
 
 OUTPUT REQUIREMENTS:
 Return ONLY a valid JSON object following this exact structure:
@@ -153,7 +160,7 @@ Return ONLY a valid JSON object following this exact structure:
     },
     "length_brevity": {
       "score": 90,
-      "feedback": "Word count against the ~500 word budget and bullet count against the 3-per-role/2-per-project limit.",
+      "feedback": "Word count against the ~650-750 word target and bullet count against the source-resume/JD-coverage guidance (rule 8).",
       "actionable_fixes": ["Trim line length if necessary."]
     },
     "section_completeness": {
