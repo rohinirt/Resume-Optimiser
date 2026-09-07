@@ -1,11 +1,14 @@
 import streamlit as st
 import streamlit.components.v1 as components
+from io import BytesIO
 from utils import (
     extract_text_from_file, 
     generate_standard_resume_sheet_html,
     generate_paper_sheet_tailored_html,
     generate_new_formatted_docx,
-    extract_docx_hyperlink_map
+    extract_docx_hyperlink_map,
+    extract_contact_header,
+    to_name_case
 )
 from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
@@ -21,6 +24,27 @@ if 'page' not in st.session_state:
 
 if 'active_tab' not in st.session_state:
     st.session_state['active_tab'] = 'Analysis'
+
+# Manually-persisted copies of the last uploaded files / JD text. Streamlit
+# clears a widget's own internal state when that widget isn't rendered during
+# a script run (e.g. navigating from 'landing' to 'results' and back), so we
+# keep independent session_state entries here and re-seed the widgets from
+# them on every render — that way "Change File" only clears what the user
+# actually replaces, not everything.
+for _key in ('stored_resume_bytes', 'stored_resume_name',
+             'stored_experience_bytes', 'stored_experience_name',
+             'stored_projects_bytes', 'stored_projects_name'):
+    st.session_state.setdefault(_key, None)
+st.session_state.setdefault('stored_jd_text', "")
+
+def _wrap_stored_file(data, name):
+    """Wrap previously-stored bytes back into a file-like object with a .name,
+    so extract_text_from_file can read it exactly like a fresh st.file_uploader result."""
+    if not data:
+        return None
+    f = BytesIO(data)
+    f.name = name
+    return f
 
 def go_to_landing():
     st.session_state['page'] = 'landing'
@@ -156,36 +180,78 @@ if st.session_state['page'] == 'landing':
     with uc1:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 1: Upload your Resume</div>", unsafe_allow_html=True)
         uploaded_resume = st.file_uploader("Master Resume (.pdf / .docx)", type=["pdf", "docx"], key="upload_resume", label_visibility="collapsed")
+        if uploaded_resume is not None:
+            st.session_state['stored_resume_bytes'] = uploaded_resume.read()
+            uploaded_resume.seek(0)
+            st.session_state['stored_resume_name'] = uploaded_resume.name
+        elif st.session_state['stored_resume_name']:
+            st.caption(f"📎 Using previously uploaded: **{st.session_state['stored_resume_name']}** (upload a new file to replace)")
     with uc2:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 2: Upload Experience File</div>", unsafe_allow_html=True)
         uploaded_experience = st.file_uploader("Experience File (.pdf / .docx)", type=["pdf", "docx"], key="upload_exp", label_visibility="collapsed")
+        if uploaded_experience is not None:
+            st.session_state['stored_experience_bytes'] = uploaded_experience.read()
+            uploaded_experience.seek(0)
+            st.session_state['stored_experience_name'] = uploaded_experience.name
+        elif st.session_state['stored_experience_name']:
+            st.caption(f"📎 Using previously uploaded: **{st.session_state['stored_experience_name']}** (upload a new file to replace)")
     with uc3:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 3: Upload Projects Repository</div>", unsafe_allow_html=True)
         uploaded_projects = st.file_uploader("Projects Repository (.pdf / .docx)", type=["pdf", "docx"], key="upload_proj", label_visibility="collapsed")
+        if uploaded_projects is not None:
+            st.session_state['stored_projects_bytes'] = uploaded_projects.read()
+            uploaded_projects.seek(0)
+            st.session_state['stored_projects_name'] = uploaded_projects.name
+        elif st.session_state['stored_projects_name']:
+            st.caption(f"📎 Using previously uploaded: **{st.session_state['stored_projects_name']}** (upload a new file to replace)")
     with uc4:
         st.markdown("<div style='font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px;'>Step 4: Target Job Description</div>", unsafe_allow_html=True)
-        jd_input = st.text_area("Target Job Description (JD)", placeholder="Paste job requirements...", label_visibility="collapsed")
+        jd_input = st.text_area("Target Job Description (JD)", value=st.session_state['stored_jd_text'], placeholder="Paste job requirements...", label_visibility="collapsed")
+        st.session_state['stored_jd_text'] = jd_input
+
+    # Resolve the effective files to use below: a freshly uploaded file always wins;
+    # otherwise fall back to whatever was previously attached, so "Change File" only
+    # clears the specific slot the user actually replaces.
+    effective_resume = uploaded_resume if uploaded_resume is not None else _wrap_stored_file(
+        st.session_state['stored_resume_bytes'], st.session_state['stored_resume_name'])
+    effective_experience = uploaded_experience if uploaded_experience is not None else _wrap_stored_file(
+        st.session_state['stored_experience_bytes'], st.session_state['stored_experience_name'])
+    effective_projects = uploaded_projects if uploaded_projects is not None else _wrap_stored_file(
+        st.session_state['stored_projects_bytes'], st.session_state['stored_projects_name'])
     
     st.markdown("<br>", unsafe_allow_html=True)
 
     analyze_btn = st.button("Analyse and Optimise your Resume for the Targeted Role", type="primary", use_container_width=True)
 
     if analyze_btn:
-        if not uploaded_resume or not jd_input:
+        if not effective_resume or not jd_input:
             st.warning("Please upload a Master Resume and paste a Job Description to proceed.")
         else:
             with st.spinner("Executing semantic keyword mapping, gap analysis, and layout generation..."):
-                file_bytes = uploaded_resume.read()
-                uploaded_resume.seek(0)
+                file_bytes = effective_resume.read()
+                effective_resume.seek(0)
                 st.session_state['resume_bytes'] = file_bytes
-                st.session_state['file_type'] = uploaded_resume.name.split(".")[-1].lower()
-                st.session_state['file_name'] = uploaded_resume.name
+                st.session_state['file_type'] = effective_resume.name.split(".")[-1].lower()
+                st.session_state['file_name'] = effective_resume.name
                 
-                resume_text = extract_text_from_file(uploaded_resume)
-                experience_text = extract_text_from_file(uploaded_experience) if uploaded_experience else ""
-                projects_text = extract_text_from_file(uploaded_projects) if uploaded_projects else ""
+                resume_text = extract_text_from_file(effective_resume)
+                experience_text = extract_text_from_file(effective_experience) if effective_experience else ""
+                projects_text = extract_text_from_file(effective_projects) if effective_projects else ""
                 
                 results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
+
+                # Deterministically fix the header instead of trusting the model to
+                # faithfully reproduce every hyperlink label and the exact name casing
+                # every time: rebuild name/contact details straight from the source file.
+                sec2 = results.setdefault("section_2_tailored_content", {})
+                contact = sec2.setdefault("contact_info", {})
+                orig_name, orig_contact_line = (
+                    extract_contact_header(file_bytes)
+                    if st.session_state['file_type'] == 'docx' else (None, None)
+                )
+                contact["name"] = to_name_case(orig_name or contact.get("name", ""))
+                if orig_contact_line:
+                    contact["details"] = orig_contact_line
                 
                 filename_parts = results.get("suggested_filename", "").split("_")
                 company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
