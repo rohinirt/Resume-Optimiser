@@ -63,6 +63,52 @@ def extract_text_from_file(uploaded_file):
     uploaded_file.seek(0)
     return text
 
+def _locate_contact_line_index(lines, hyperlink_map):
+    """
+    Given a resume's paragraph lines and its hyperlink map, find which line is
+    the actual contact-details line (it isn't always lines[1] — some resumes
+    have a job-title subtitle between the name and contact line).
+    """
+    for i in range(1, min(len(lines), 5)):
+        if any(label.lower() in lines[i].lower() for label in hyperlink_map.keys()) or "@" in lines[i]:
+            return i
+    return 1 if len(lines) > 1 else 0
+
+def extract_contact_header(file_or_bytes):
+    """
+    Deterministically extracts (name, contact_details_line) straight from the
+    uploaded docx, in original casing/labels. Used so the app never depends on
+    the LLM faithfully reproducing every hyperlink label (LinkedIn, GitHub,
+    Portfolio, Tableau, ...) — the app rebuilds the header itself and just
+    lets the LLM supply everything else.
+    """
+    try:
+        if isinstance(file_or_bytes, (bytes, bytearray)):
+            doc = docx.Document(BytesIO(file_or_bytes))
+        else:
+            file_or_bytes.seek(0)
+            doc = docx.Document(file_or_bytes)
+            file_or_bytes.seek(0)
+    except Exception:
+        return None, None
+
+    hyperlink_map = extract_docx_hyperlink_map(file_or_bytes)
+    lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    if not lines:
+        return None, None
+    name = lines[0]
+    idx = _locate_contact_line_index(lines, hyperlink_map)
+    contact_line = lines[idx] if idx < len(lines) else ""
+    return name, contact_line
+
+def to_name_case(name):
+    """'ROHINI TEMBHURNIKAR' -> 'Rohini Tembhurnikar'. Leaves already-mixed-case names alone."""
+    if not name:
+        return name
+    if name == name.upper() or name == name.lower():
+        return name.title()
+    return name
+
 def extract_docx_hyperlink_map(file_or_bytes):
     """
     Returns an ordered {display_text: url} map of every hyperlink found in a
@@ -216,20 +262,14 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     if not lines:
         return "<p>No content found.</p>"
 
-    cand_name = html.escape(lines[0])
+    cand_name = html.escape(to_name_case(lines[0]))
 
     # The contact/details line isn't always lines[1] — some resumes have a job-title
     # subtitle line (e.g. "Data Analyst") between the name and the contact line. Find
     # the first line that actually contains one of the known hyperlink labels (or a
     # phone/email-like pattern) and treat that as the contact line; anything in
     # between is shown as a plain subtitle line.
-    contact_idx = None
-    for i in range(1, min(len(lines), 5)):
-        if any(label in lines[i] for label in hyperlink_map.keys()) or "@" in lines[i]:
-            contact_idx = i
-            break
-    if contact_idx is None:
-        contact_idx = 1 if len(lines) > 1 else 0
+    contact_idx = _locate_contact_line_index(lines, hyperlink_map)
 
     subtitle_lines = lines[1:contact_idx]
     cand_details = render_contact_line_html(lines[contact_idx], hyperlink_map) if contact_idx < len(lines) else ""
