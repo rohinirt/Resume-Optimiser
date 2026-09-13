@@ -89,12 +89,12 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 2. EXPERIENCE REWRITING (Google XYZ Formula):
    - Analyze both the Master Resume and the Additional Work Experience file.
    - Align role bullet points directly with the primary responsibilities and tools requested in the JD.
-   - Format bullet points strictly using: "Accomplished [X] as measured by [Y] by doing [Z]".
+   - Format bullet points strictly using: "Accomplished [X] as measured by [Y] by doing [Z]", Use strong action verb and imactful results.
    - METRIC INTEGRITY RULE (overrides formatting preference when in conflict): Only include a numeric metric [Y] if a real number, percentage, or scale indicator exists in the source files for that specific achievement. If no verifiable metric exists, do NOT invent one — instead, describe concrete scope or scale using real, sourced details (e.g., team size, data volume, frequency, tools used) rather than a fabricated percentage. A bullet without a fabricated number is always preferable to a bullet with an invented one.
    - Use Markdown bold syntax (**text**) around key tools, metrics, and high-impact terms within bullet point strings for recruiter scannability. Do not use any other markup.
 
 3. PROJECT SELECTION:
-   - Analyze the Projects File and Master Resume to identify the top 2-3 projects that best mirror the domain, tech stack, and analytical challenges described in the JD.
+   - Analyze the Projects File and Master Resume to identify the top 2 projects that best mirror the domain, tech stack, and analytical challenges described in the JD.
    - Rewrite project bullet points focusing on quantifiable business outcomes, following the same METRIC INTEGRITY RULE as above — no invented numbers.
    - LINK INTEGRITY RULE: The Projects File and Master Resume contain hyperlink URLs shown inline in parentheses right after their link text (e.g. "Link (https://github.com/...)"). For each selected project, if such a URL exists for that exact project, copy it VERBATIM into "project_link" and set "project_link_label" to the original link text (e.g. "Link", "GitHub", "Dashboard"). If no URL exists for a chosen project, leave "project_link" as an empty string — never invent, guess, or reuse a URL from a different project.
 
