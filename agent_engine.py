@@ -90,7 +90,7 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
 - Position me according to the actual requirements of the JD
 - Mention only JD-relevant technical areas
 - Keep it concise, measurable, realistic
-- Must be 35 to 40 words only (strict: not less, not more)
+- Must be 40 to 50 words only (strict: not less, not more)
 - Include mandatory JD hard skills naturally
 - Avoid fluff or generic adjectives
 - Naturally incorporate the most important keywords from the JD
@@ -141,7 +141,7 @@ Your task is to conduct an exhaustive analysis of the provided Job Description (
    - Aim to fit the rewritten resume on approximately one A4 page, but content completeness and JD-coverage take priority over hitting an exact page count.
    - EXPERIENCE BULLET COUNT: For each role, include as many bullets as needed to cover the JD's required skills/responsibilities — this should generally match how many bullets that role has in the Master Resume (typically 3-5), not an arbitrary fixed number. Only trim below the source count if truly redundant or clearly irrelevant to the JD; never cut below 3 bullets for a role that has 3+ in the source unless the JD is extremely narrow.
    - PROJECT BULLET COUNT: 2-3 bullets per selected project (each bullet 15-25 words).
-   - professional_summary: 2-3 sentences (max 55 words).
+   - professional_summary: 40 - 50 words
    - Keep total content across all sections in section_2_tailored_content within approximately 650-750 words to stay close to one page — but do not drop JD-relevant bullets just to hit a lower word count. If the honest content genuinely runs past one page, prioritize the highest-impact, most JD-relevant bullets when trimming, and trim length/wording per bullet before cutting whole bullets.
 
 OUTPUT REQUIREMENTS:
