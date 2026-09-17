@@ -10,7 +10,7 @@ import re
 from io import BytesIO
 from pypdf import PdfReader
 
-BODY_FONT = "Calibri"
+BODY_FONT = "Arial"
 
 def _paragraph_text_with_links(para):
     """
@@ -334,7 +334,7 @@ def generate_standard_resume_sheet_html(title_header, content_text_or_bytes, is_
     <head>
         <style>
             body {{
-                font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+                font-family: Arial, 'Segoe UI', Arial, sans-serif;
                 background-color: #ffffff;
                 color: #000000;
                 margin: 0;
@@ -466,7 +466,7 @@ def generate_paper_sheet_tailored_html(results, contact_hyperlink_map=None):
     <head>
         <style>
             body {{
-                font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+                font-family: Arial, 'Segoe UI', Arial, sans-serif;
                 background-color: #ffffff;
                 color: #000000;
                 margin: 0;
