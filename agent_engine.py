@@ -67,38 +67,57 @@ def _extract_retry_delay(error, default=2.0):
     return default
 
 
+import random
+import time
+
+
 def _call_gemini(
     prompt: str,
     schema: dict,
     thinking_level: str = "medium",
-    max_retries: int = 1
+    model: str = None,
+    max_retries: int = 3
 ) -> dict:
+
+    models_to_try = []
+
+    if model:
+        models_to_try.append(model)
+
+    models_to_try.extend([
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+    ])
+
+    # Remove duplicates while preserving order
+    models_to_try = list(dict.fromkeys(models_to_try))
 
     last_error = None
 
-    for model in [PRIMARY_MODEL] + FALLBACK_MODELS:
+    for current_model in models_to_try:
 
-        for attempt in range(max_retries + 1):
+        for attempt in range(max_retries):
 
             try:
 
-                config = types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=schema,
-                    thinking_config=types.ThinkingConfig(
-                        thinking_level=thinking_level
+                response = client.models.generate_content(
+                    model=current_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=schema,
+                        thinking_config=types.ThinkingConfig(
+                            thinking_level=thinking_level
+                        ),
                     ),
                 )
 
-                response = client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=config,
-                )
-
                 if not response.text:
-                    raise ValueError(
-                        f"Gemini returned an empty response from {model}"
+                    raise RuntimeError(
+                        f"Empty response from {current_model}"
                     )
 
                 return json.loads(response.text)
@@ -108,23 +127,28 @@ def _call_gemini(
                 last_error = error
                 status = _get_status_code(error)
 
-                if status in (429, 500, 503) and attempt < max_retries:
+                # Only retry transient failures
+                if status in (429, 500, 503):
 
-                    delay = _extract_retry_delay(error)
+                    # Exponential backoff + jitter
+                    delay = min(
+                        30,
+                        2 ** attempt
+                    ) + random.uniform(0, 1)
 
                     time.sleep(delay)
 
                     continue
 
-                if status in (404, 429, 500, 503):
-
-                    break
-
+                # 404 / 400 / authentication etc.
+                # should not be hammered repeatedly.
                 break
 
-    raise last_error or RuntimeError(
-        "All Gemini models failed."
-    )
+    raise RuntimeError(
+        "Gemini API is temporarily unavailable. "
+        "Multiple models and retries were attempted. "
+        "Please try again in a few minutes."
+    ) from last_error
 
 
 # ============================================================
