@@ -16,9 +16,10 @@ from google.genai import types
 PRIMARY_MODEL = "gemini-3.8-flash"
 
 FALLBACK_MODELS = [
+    "gemini-3.7-flash",
     "gemini-3.6-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
 ]
 
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
