@@ -10,7 +10,7 @@ from utils import (
     extract_contact_header,
     to_name_case
 )
-from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
+from agent_engine import analyze_and_optimize_resume
 
 st.set_page_config(
     page_title="ResumeTarget | ATS Optimization", 
