@@ -258,8 +258,8 @@ if st.session_state['page'] == 'landing':
                 # real_salary = fetch_real_web_salary(company_name, "Data Analyst")
                 # results["salary_benchmark"] = real_salary
 
-                # st.session_state['results'] = results
-                # st.session_state['page'] = 'results'
+                st.session_state['results'] = results
+                st.session_state['page'] = 'results'
                 st.session_state['active_tab'] = 'Analysis'
                 st.rerun()
 
