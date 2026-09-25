@@ -10,7 +10,7 @@ from utils import (
     extract_contact_header,
     to_name_case
 )
-from agent_engine import analyze_and_optimize_resume
+from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
 
 st.set_page_config(
     page_title="ResumeTarget | ATS Optimization", 
@@ -255,8 +255,8 @@ if st.session_state['page'] == 'landing':
                 
                 filename_parts = results.get("suggested_filename", "").split("_")
                 company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
-                # real_salary = fetch_real_web_salary(company_name, "Data Analyst")
-                # results["salary_benchmark"] = real_salary
+                real_salary = fetch_real_web_salary(company_name, "Data Analyst")
+                results["salary_benchmark"] = real_salary
 
                 st.session_state['results'] = results
                 st.session_state['page'] = 'results'
