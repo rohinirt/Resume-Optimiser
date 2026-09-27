@@ -10,9 +10,10 @@ from google.genai import types, errors
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-# Kept exactly as configured: fallback chain from newest to most broadly
-# available free-tier model, all on the Gemini free tier.
-MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash-lite']
+# Fallback chain from newest to most broadly available free-tier model, all on
+# the Gemini free tier. gemini-2.5-flash-lite was retired for new users
+# (404s pointing at gemini-3.5-flash-lite as the replacement) — swapped below.
+MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite']
 
 
 # ---------------------------------------------------------------------------
