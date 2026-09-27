@@ -1,3 +1,4 @@
+import html
 import streamlit as st
 import streamlit.components.v1 as components
 from io import BytesIO
@@ -8,9 +9,14 @@ from utils import (
     generate_new_formatted_docx,
     extract_docx_hyperlink_map,
     extract_contact_header,
-    to_name_case
+    to_name_case,
+    looks_like_weak_extraction
 )
-from agent_engine import analyze_and_optimize_resume, fetch_real_web_salary
+from agent_engine import (
+    analyze_and_optimize_resume,
+    generate_referral_template,
+    generate_mail_template,
+)
 
 st.set_page_config(
     page_title="ResumeTarget | ATS Optimization", 
@@ -237,7 +243,14 @@ if st.session_state['page'] == 'landing':
                 resume_text = extract_text_from_file(effective_resume)
                 experience_text = extract_text_from_file(effective_experience) if effective_experience else ""
                 projects_text = extract_text_from_file(effective_projects) if effective_projects else ""
-                
+
+                if looks_like_weak_extraction(resume_text):
+                    st.warning(
+                        "The uploaded resume produced very little readable text — the layout "
+                        "(columns, tables, or scanned images) may not be parsing well. Results "
+                        "below may be less accurate. Try a simpler-formatted PDF or a .docx export."
+                    )
+
                 results = analyze_and_optimize_resume(resume_text, projects_text, experience_text, jd_input)
 
                 # Deterministically fix the header instead of trusting the model to
@@ -252,11 +265,6 @@ if st.session_state['page'] == 'landing':
                 contact["name"] = to_name_case(orig_name or contact.get("name", ""))
                 if orig_contact_line:
                     contact["details"] = orig_contact_line
-                
-                filename_parts = results.get("suggested_filename", "").split("_")
-                company_name = filename_parts[-1] if len(filename_parts) > 1 else ""
-                real_salary = fetch_real_web_salary(company_name, "Data Analyst")
-                results["salary_benchmark"] = real_salary
 
                 st.session_state['results'] = results
                 st.session_state['page'] = 'results'
@@ -440,5 +448,69 @@ elif st.session_state['page'] == 'results':
         else:
             paper_html = generate_paper_sheet_tailored_html(res, contact_hyperlink_map=contact_hyperlink_map)
             components.html(paper_html, height=880, scrolling=True)
+
+    # ROW 2: OUTREACH TEMPLATES (LinkedIn referral request + application email)
+    st.markdown("<hr style='margin: 24px 0 20px 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='font-weight: 800; font-size: 1.15rem; color: #0f172a; margin-bottom: 14px;'>Outreach Templates</div>",
+        unsafe_allow_html=True
+    )
+
+    candidate_summary = res.get("section_2_tailored_content", {}).get("professional_summary", "")
+    jd_for_templates = st.session_state.get('stored_jd_text', "")
+
+    tmpl_col1, tmpl_col2 = st.columns([1, 1])
+
+    with tmpl_col1:
+        hdr_r1c1, hdr_r1c2 = st.columns([1.6, 1])
+        with hdr_r1c1:
+            st.markdown(
+                "<div style='font-weight: 700; font-size: 1rem; color: #0f172a; padding-top: 6px;'>LinkedIn Referral Message</div>",
+                unsafe_allow_html=True
+            )
+        with hdr_r1c2:
+            referral_tone = st.selectbox(
+                "Tone",
+                options=["Professional", "Casual", "Enthusiastic", "Formal", "Friendly"],
+                key="referral_tone_select",
+                label_visibility="collapsed"
+            )
+        with st.spinner("Drafting referral message..."):
+            referral_text = generate_referral_template(jd_for_templates, candidate_summary, referral_tone)
+        referral_body = (
+            html.escape(referral_text) if referral_text
+            else '<em style="color:#64748b;">Referral message will appear here.</em>'
+        )
+        st.markdown(f"""
+        <div class="panel-card" style="min-height: 260px;">
+            <div style="font-size: 0.85rem; color: #334155; line-height: 1.6; white-space: pre-wrap;">{referral_body}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tmpl_col2:
+        st.markdown(
+            "<div style='font-weight: 700; font-size: 1rem; color: #0f172a; padding-top: 6px; margin-bottom: 0;'>Application Email</div>",
+            unsafe_allow_html=True
+        )
+        # Spacer to align this card's top edge with the referral card's, since
+        # the referral column has an extra row for its tone dropdown.
+        st.markdown("<div style='height: 38px;'></div>", unsafe_allow_html=True)
+        with st.spinner("Drafting application email..."):
+            mail = generate_mail_template(jd_for_templates, candidate_summary)
+        mail_subject = html.escape(mail.get("subject", "")) if mail.get("subject") else ""
+        mail_body = (
+            html.escape(mail.get("body", "")) if mail.get("body")
+            else '<em style="color:#64748b;">Email draft will appear here.</em>'
+        )
+        subject_html = (
+            f'<div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 8px;">Subject: {mail_subject}</div>'
+            if mail_subject else ""
+        )
+        st.markdown(f"""
+        <div class="panel-card" style="min-height: 260px;">
+            {subject_html}
+            <div style="font-size: 0.85rem; color: #334155; line-height: 1.6; white-space: pre-wrap;">{mail_body}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
