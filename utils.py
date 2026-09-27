@@ -36,22 +36,71 @@ def _paragraph_text_with_links(para):
             parts.append(getattr(item, "text", ""))
     return "".join(parts), links
 
+def _extract_pdf_text_pdfplumber(uploaded_file):
+    """
+    pdfplumber generally handles multi-column layouts, tables, and text boxes
+    (common in resume templates) more faithfully than pypdf's extract_text().
+    Returns None (rather than "") if pdfplumber itself isn't usable, so callers
+    can tell "library unavailable/failed" apart from "ran fine, page was blank".
+    """
+    try:
+        import pdfplumber
+    except ImportError:
+        return None
+    try:
+        uploaded_file.seek(0)
+        text = ""
+        with pdfplumber.open(uploaded_file) as pdf:
+            for page in pdf.pages:
+                text += (page.extract_text() or "") + "\n"
+        return text
+    except Exception:
+        return None
+    finally:
+        uploaded_file.seek(0)
+
+def _extract_pdf_text_pypdf(uploaded_file):
+    uploaded_file.seek(0)
+    text = ""
+    pdf = PdfReader(uploaded_file)
+    for page in pdf.pages:
+        text += (page.extract_text() or "") + "\n"
+    uploaded_file.seek(0)
+    return text
+
+def looks_like_weak_extraction(text, min_chars=200):
+    """
+    Heuristic used by the app to warn the user when extracted resume text is
+    suspiciously short relative to what a real resume should contain — a sign
+    the PDF used a layout/encoding neither extraction library could parse well,
+    which would otherwise silently degrade every downstream LLM call.
+    """
+    return len((text or "").strip()) < min_chars
+
 def extract_text_from_file(uploaded_file):
     """
     Extracts plain text for feeding to the LLM. For docx files, hyperlink URLs
     are appended inline right after their display text, e.g. 'LinkedIn
     (https://linkedin.com/in/...)', so the model can see and copy real URLs
     instead of ever inventing one (ZERO HALLUCINATION CONSTRAINT).
+
+    For PDFs, tries pdfplumber first (better on multi-column/tabular resume
+    layouts) and falls back to / cross-checks against pypdf, since either
+    library can silently do a poor job depending on how the PDF was produced.
+    We keep whichever result actually extracted more content.
     """
     if not uploaded_file:
         return ""
     text = ""
     uploaded_file.seek(0)
-    if uploaded_file.name.endswith(".pdf"):
-        pdf = PdfReader(uploaded_file)
-        for page in pdf.pages:
-            text += (page.extract_text() or "") + "\n"
-    elif uploaded_file.name.endswith(".docx"):
+    if uploaded_file.name.lower().endswith(".pdf"):
+        text_plumber = _extract_pdf_text_pdfplumber(uploaded_file)
+        if text_plumber and len(text_plumber.strip()) >= 40:
+            text = text_plumber
+        else:
+            text_pypdf = _extract_pdf_text_pypdf(uploaded_file)
+            text = text_pypdf if (not text_plumber or len(text_pypdf.strip()) > len(text_plumber.strip())) else text_plumber
+    elif uploaded_file.name.lower().endswith(".docx"):
         doc = docx.Document(uploaded_file)
         for para in doc.paragraphs:
             line, links = _paragraph_text_with_links(para)
